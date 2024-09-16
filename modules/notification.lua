@@ -1,133 +1,144 @@
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
+local TextService = game:GetService("TextService")
 local Players = game:GetService("Players")
 
-local Module = {}
+local NotifGui = Instance.new("ScreenGui")
+NotifGui.Name = "NotificationLib"
+NotifGui.Parent = RunService:IsStudio() and Players.LocalPlayer.PlayerGui or game:GetService("CoreGui")
 
-local function SetDefault(options, defaults)
-    return setmetatable(options or {}, {__index = defaults})
+local Container = Instance.new("Frame")
+Container.Name = "Container"
+Container.Position = UDim2.new(0, 20, 0.5, -20)
+Container.Size = UDim2.new(0, 300, 0.5, 0)
+Container.BackgroundTransparency = 1
+Container.Parent = NotifGui
+
+local function createImage(id, isButton)
+    local image = Instance.new(isButton and "ImageButton" or "ImageLabel")
+    image.Image = id
+    image.BackgroundTransparency = 1
+    return image
 end
 
-local function CreateBaseGui()
-    local NotifUI = Instance.new("ScreenGui")
-    NotifUI.Name = "NotifUI"
-    NotifUI.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-    
-    local Holder = Instance.new("ScrollingFrame")
-    Holder.Name = "Holder"
-    Holder.Parent = NotifUI
-    Holder.Active = true
-    Holder.AnchorPoint = Vector2.new(1, 0)
-    Holder.BackgroundTransparency = 1
-    Holder.Position = UDim2.new(1, 0, 0, 0)
-    Holder.Size = UDim2.new(0.25, 0, 1, 0)
-    Holder.CanvasSize = UDim2.new(0, 0, 0, 0)
-    
-    local Sorter = Instance.new("UIListLayout")
-    Sorter.Parent = Holder
-    Sorter.HorizontalAlignment = Enum.HorizontalAlignment.Center
-    Sorter.SortOrder = Enum.SortOrder.LayoutOrder
-    Sorter.VerticalAlignment = Enum.VerticalAlignment.Bottom
-    Sorter.Padding = UDim.new(0, 10)
-    
-    return Holder
+local function createRoundRect()
+    local image = createImage("http://www.roblox.com/asset/?id=5761488251")
+    image.ScaleType = Enum.ScaleType.Slice
+    image.SliceCenter = Rect.new(2, 2, 298, 298)
+    image.ImageColor3 = Color3.fromRGB(30, 30, 30)
+    return image
 end
 
-local Holder = CreateBaseGui()
+local function createShadow()
+    local image = createImage("http://www.roblox.com/asset/?id=5761498316")
+    image.ScaleType = Enum.ScaleType.Slice
+    image.SliceCenter = Rect.new(17, 17, 283, 283)
+    image.Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(30, 30)
+    image.Position = UDim2.fromOffset(-15, -15)
+    image.ImageColor3 = Color3.fromRGB(30, 30, 30)
+    return image
+end
 
-function Module:CreateNotification(Options)
-    local Default = {
-        Buttons = {
-            {
-                Title = 'Dismiss',
-                ClosesUI = true,
-                Callback = function() end
-            }
-        },
-        Title = 'Notification Title',
-        Content = 'Placeholder notification content',
-        Length = 5,
-        NeverExpire = false
-    }
-    Options = SetDefault(Options, Default)
-    
-    local Notification = Instance.new("Frame")
-    Notification.Name = "Notification"
-    Notification.Parent = Holder
-    Notification.BackgroundColor3 = Color3.new(0, 0, 0)
-    Notification.BackgroundTransparency = 0.3
-    Notification.Position = UDim2.new(0.1, 0, 0, -132)
-    Notification.Size = UDim2.new(0, 262, 0, 0)
-    Notification.Visible = false
-    
-    Instance.new("UICorner").Parent = Notification
-    
-    local Title = Instance.new("TextLabel")
-    Title.Parent = Notification
-    Title.BackgroundTransparency = 1
-    Title.Position = UDim2.new(0.057, 0, 0.053, 0)
-    Title.Size = UDim2.new(0, 194, 0, 29)
-    Title.Font = Enum.Font.GothamMedium
-    Title.Text = Options.Title
-    Title.TextColor3 = Color3.new(1, 1, 1)
-    Title.TextSize = 16
-    Title.TextXAlignment = Enum.TextXAlignment.Left
-    
-    local Content = Instance.new("TextLabel")
-    Content.Parent = Notification
-    Content.BackgroundTransparency = 1
-    Content.Position = UDim2.new(0.057, 0, 0.303, 0)
-    Content.Size = UDim2.new(0, 233, 0, 52)
-    Content.Font = Enum.Font.Gotham
-    Content.Text = Options.Content
-    Content.TextColor3 = Color3.fromRGB(234, 234, 234)
-    Content.TextSize = 14
-    Content.TextWrapped = true
-    Content.TextXAlignment = Enum.TextXAlignment.Left
-    Content.TextYAlignment = Enum.TextYAlignment.Top
-    
-    if Options.Buttons[1] then
-        local Button = Instance.new("TextButton")
-        Button.Parent = Notification
-        Button.BackgroundColor3 = Color3.new(1, 1, 1)
-        Button.Position = UDim2.new(0.057, 0, 0.697, 0)
-        Button.Size = UDim2.new(0, 233, 0, 29)
-        Button.Font = Enum.Font.GothamMedium
-        Button.Text = Options.Buttons[1].Title or "Dismiss"
-        Button.TextColor3 = Color3.new(0, 0, 0)
-        Button.TextSize = 16
-        
-        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 6)
-        
-        Button.MouseButton1Click:Connect(function()
-            if Options.Buttons[1].Callback then
-                task.spawn(Options.Buttons[1].Callback)
-            end
-            if Options.Buttons[1].ClosesUI then
-                Notification:Destroy()
-            end
-        end)
+local Padding = 10
+local DescriptionPadding = 10
+local InstructionObjects = {}
+local TweenInfo = TweenInfo.new(1, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+local MaxWidth = Container.AbsoluteSize.X - Padding - DescriptionPadding
+
+local function calculateBounds(objects)
+    local x, y = 0, 0
+    for _, obj in ipairs(objects) do
+        x = x + obj.AbsoluteSize.X
+        y = y + obj.AbsoluteSize.Y
     end
-    
-    Notification.Visible = true
-    TweenService:Create(Notification, 
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-        {Position = UDim2.new(0.1, 0, 0, 0), Size = UDim2.new(0, 262, 0, 132)}
-    ):Play()
-    
-    if not Options.NeverExpire then
-        task.delay(Options.Length, function()
-            if not Notification.Parent then return end
-            for _, v in ipairs(Notification:GetDescendants()) do
-                if v:IsA("TextLabel") or v:IsA("TextButton") then
-                    TweenService:Create(v, TweenInfo.new(0.4), {TextTransparency = 1}):Play()
-                elseif v:IsA("Frame") or v:IsA("ScrollingFrame") then
-                    TweenService:Create(v, TweenInfo.new(0.4), {BackgroundTransparency = 1}):Play()
-                end
-            end
-            task.wait(0.4)
-            Notification:Destroy()
-        end)
+    return {X = x, Y = y, x = x, y = y}
+end
+
+local CachedObjects = {}
+
+local function updatePositions()
+    local previousBounds = {Y = 0}
+    for i, obj in ipairs(InstructionObjects) do
+        local label, delta = obj[1], obj[2]
+        if delta < 1 then
+            obj[2] = math.min(delta + RunService.Heartbeat:Wait(), 1)
+        end
+        local newValue = TweenService:GetValue(obj[2], Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+        local targetPos = UDim2.new(0, 0, 0, previousBounds.Y + (Padding * (i - 1)))
+        label.Position = label.Position:Lerp(targetPos, newValue)
+        previousBounds = calculateBounds({label})
+    end
+    CachedObjects = InstructionObjects
+end
+
+RunService:BindToRenderStep("UpdateNotifications", Enum.RenderPriority.Camera.Value, updatePositions)
+
+local TextSettings = {
+    Title = {Font = Enum.Font.GothamSemibold, Size = 14},
+    Description = {Font = Enum.Font.Gotham, Size = 14}
+}
+
+local function createLabel(text, settings, isButton)
+    local label = Instance.new(isButton and "TextButton" or "TextLabel")
+    label.Text = text
+    label.Font = settings.Font
+    label.TextSize = settings.Size
+    label.BackgroundTransparency = 1
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.RichText = true
+    label.TextColor3 = Color3.new(1, 1, 1)
+    return label
+end
+
+local function fadeOut(object)
+    local prop = ({TextLabel = "TextTransparency", Frame = "BackgroundTransparency", ImageLabel = "ImageTransparency"})[object.ClassName]
+    TweenService:Create(object, TweenInfo, {[prop] = 1}):Play()
+end
+
+local function removeNotification(label)
+    fadeOut(label)
+    for _, child in ipairs(label:GetDescendants()) do
+        fadeOut(child)
+    end
+    task.wait(0.25)
+    table.remove(InstructionObjects, table.find(InstructionObjects, label))
+    for _, obj in ipairs(InstructionObjects) do
+        obj[2] = 0
     end
 end
 
-return Module
+local function notify(properties)
+    local title, description, duration = properties.Title, properties.Description, properties.Duration or 5
+
+    if not (title or description) then return end
+
+    local height = (title and 26 or 0) + (description and TextService:GetTextSize(description, TextSettings.Description.Size, TextSettings.Description.Font, Vector2.new(MaxWidth, math.huge)).Y + 8 or 0)
+
+    local label = createRoundRect()
+    label.Size = UDim2.new(1, 0, 0, height)
+    label.Position = UDim2.new(-1, 20, 0, calculateBounds(CachedObjects).Y + (Padding * #CachedObjects))
+
+    if title then
+        local titleLabel = createLabel(title, TextSettings.Title)
+        titleLabel.Size = UDim2.new(1, -10, 0, 26)
+        titleLabel.Position = UDim2.fromOffset(10, 0)
+        titleLabel.Parent = label
+    end
+
+    if description then
+        local descLabel = createLabel(description, TextSettings.Description)
+        descLabel.TextWrapped = true
+        descLabel.Size = UDim2.fromScale(1, 1) + UDim2.fromOffset(-DescriptionPadding, title and -26 or 0)
+        descLabel.Position = UDim2.fromOffset(10, title and 26 or 0)
+        descLabel.TextYAlignment = title and Enum.TextYAlignment.Top or Enum.TextYAlignment.Center
+        descLabel.Parent = label
+    end
+
+    createShadow().Parent = label
+    label.Parent = Container
+    table.insert(InstructionObjects, {label, 0})
+
+    task.delay(duration, removeNotification, label)
+end
+
+return {Notify = notify}
