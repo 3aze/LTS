@@ -175,18 +175,8 @@ local function showNotification()
 end
 
 local function formatLogEntry(method, url, headers)
-    if not method or not url then return "" end
-
-    local text = method .. "\n" .. url
-
-    if headers and type(headers) == "table" then
-        text ..= "\n\nHeaders:"
-        for key, value in pairs(headers) do
-            text ..= string.format("\n%s: %s", tostring(key), tostring(value))
-        end
-    end
-
-    return text
+    if not url then return "" end
+    return url
 end
 
 local function createLogEntry(method, url, headers)
@@ -201,7 +191,7 @@ local function createLogEntry(method, url, headers)
         TextSize = 14,
         TextWrapped = true,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
+        TextYAlignment = Enum.TextYAlignment.Center,
         AutoButtonColor = false,
         Text = logText,
         Parent = MainContainer
@@ -216,8 +206,6 @@ local function createLogEntry(method, url, headers)
         Parent = LogEntry,
         PaddingLeft = UDim.new(0, 10),
         PaddingRight = UDim.new(0, 10),
-        PaddingTop = UDim.new(0, 5),
-        PaddingBottom = UDim.new(0, 5)
     })
 
     local textSize = TextService:GetTextSize(
@@ -226,7 +214,7 @@ local function createLogEntry(method, url, headers)
         LogEntry.Font,
         Vector2.new(MainContainer.AbsoluteSize.X - 40, math.huge)
     )
-    LogEntry.Size = UDim2.new(1, 0, 0, textSize.Y + 10)
+    LogEntry.Size = UDim2.new(1, 0, 0, math.max(30, textSize.Y + 10))
 
     local OriginalColor = LogEntry.BackgroundColor3
 
@@ -254,7 +242,7 @@ UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanva
 createDraggable(MainFrame)
 updateCanvasSize()
 
--- HTTP Spy Logic (unchanged)
+-- HTTP Spy Logic
 local HttpGet
 HttpGet = hookfunction(game.HttpGet, function(self, url, ...)
     createLogEntry("HTTP GET", url)
