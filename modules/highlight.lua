@@ -1,1 +1,507 @@
-local a=game:GetService("TextService")local b=game:GetService("RunService")local c={}local d local e local f local g local h={}local i={}local j=0 local k=0 local l=15 local m=Enum.Font.Ubuntu local n=14 local o=Color3.fromRGB(40,44,52)local p=Color3.fromRGB(187,85,255)local q=Color3.fromRGB(97,175,239)local r=Color3.fromRGB(152,195,121)local s=Color3.fromRGB(209,154,102)local t=s local u=Color3.fromRGB(229,192,123)local v=Color3.fromRGB(224,108,117)local w=Color3.fromRGB(148,148,148)local x=w local y=Color3.fromRGB(240,240,240)local z={"^(function)[^%w_]";"^(local)[^%w_]";"^(if)[^%w_]","^(for)[^%w_]","^(while)[^%w_]";"^(then)[^%w_]";"^(do)[^%w_]","^(else)[^%w_]","^(elseif)[^%w_]";"^(return)[^%w_]";"^(end)[^%w_]";"^(continue)[^%w_]";"^(and)[^%w_]";"^(not)[^%w_]";"^(or)[^%w_]","[^%w_](or)[^%w_]","[^%w_](and)[^%w_]","[^%w_](not)[^%w_]";"[^%w_](continue)[^%w_]";"[^%w_](function)[^%w_]","[^%w_](local)[^%w_]";"[^%w_](if)[^%w_]";"[^%w_](for)[^%w_]","[^%w_](while)[^%w_]";"[^%w_](then)[^%w_]","[^%w_](do)[^%w_]";"[^%w_](else)[^%w_]","[^%w_](elseif)[^%w_]";"[^%w_](return)[^%w_]";"[^%w_](end)[^%w_]"}local A={{"\"";"\""},{"\'","\'"},{"%[%[";"%]%]";true}}local B={"%-%-%[%[[^%]%]]+%]?%]?";"(%-%-[^\n]+)"}local C={"[^%w_]([%a_][%a%d_]*)%s*%(","^([%a_][%a%d_]*)%s*%(";"[:%.%(%[%p]([%a_][%a%d_]*)%s*%("}local D={"[^%w_](%d+[eE]?%d*)","[^%w_](%.%d+[eE]?%d*)","[^%w_](%d+%.%d+[eE]?%d*)";"^(%d+[eE]?%d*)";"^(%.%d+[eE]?%d*)","^(%d+%.%d+[eE]?%d*)"}local E={"[^%w_](true)","^(true)";"[^%w_](false)","^(false)","[^%w_](nil)";"^(nil)"}local F={"[^%w_:]([%a_][%a%d_]*):";"^([%a_][%a%d_]*):"}local G={"[^_%s%w=>~<%-%+%*]";">";"~";"<","%-";"%+";"=";"%*"}local H={}function isOffLimits(a)for b,c in pairs(H)do if a>=c[1]and a<=c[2]then return true end end return false end function gfind(a,b)return coroutine.wrap(function()local c=0 while true do local d,e=a:find(b,c)if d and e~=#a then c=e+1 coroutine.yield(d,e)else return end end end)end function renderComments()local a=c:getRaw()local d=1 for c,e in pairs(B)do for a,c in gfind(a,e)do if d%1000==0 then b.Heartbeat:Wait()end d+=1 if not isOffLimits(a)then for b=a,c,1 do table.insert(H,{a,c})if i[b]then i[b].Color=w end end end end end end function renderStrings()local a local b local c local d local e local f local g=false for h,j in pairs(i)do if a then j.Color=r local k=""for a=d,h,1 do k=k..i[a].Char end if j.Char:match(b)and not(not c)or k:match("(\\*)"..(b.."$"))and#k:match("(\\*)"..(b.."$"))%2==0 then g=true a=nil b=nil c=nil e=h H[f][2]=e end end if not g then for e,g in pairs(A)do if j.Char:match(g[1])and not isOffLimits(h)then a=g[1]b=g[2]c=g[3]j.Color=r d=h f=#H+1 H[f]={d,math.huge}end end end g=false end end function highlightPattern(a,d)local e=c:getRaw()local f=1 for a,c in pairs(a)do for a,c in gfind(e,c)do if f%1000==0 then b.Heartbeat:Wait()end f+=1 if not isOffLimits(a)and not isOffLimits(c)then for a=a,c,1 do if i[a]then i[a].Color=d end end end end end end function autoEscape(a)for b=0,#a,1 do local c=string.sub(a,b,b)if c=="<"then a=string.format("%s%s%s",string.sub(a,0,b-1),"&lt;",string.sub(a,b+1,-1))b+=3 elseif c==">"then a=string.format("%s%s%s",string.sub(a,0,b-1),"&gt;",string.sub(a,b+1,-1))b+=3 elseif c=="\""then a=string.format("%s%s%s",string.sub(a,0,b-1),"&quot;",string.sub(a,b+1,-1))b+=5 elseif c=="\'"then a=string.format("%s%s%s",string.sub(a,0,b-1),"&apos;",string.sub(a,b+1,-1))b+=5 elseif c=="&"then a=string.format("%s%s%s",string.sub(a,0,b-1),"&amp;",string.sub(a,b+1,-1))b+=4 end end return a end function render()H={}h={}f:ClearAllChildren()g:ClearAllChildren()highlightPattern(C,q)highlightPattern(D,s)highlightPattern(z,p)highlightPattern(F,u)highlightPattern(E,t)highlightPattern(G,y)renderComments()renderStrings()local c local d=""local e=""k=0 j=1 for h=1,#i+1,1 do local o=i[h]if h==#i+1 or o.Char=="\n"then d=d..(c and"</font>"or"")local o=Instance.new("TextLabel")local p=(a:GetTextSize(e,n,m,Vector2.new(math.huge,math.huge))).X+60 if p>k then k=p end o.TextXAlignment=Enum.TextXAlignment.Left o.TextYAlignment=Enum.TextYAlignment.Top o.Position=UDim2.new(0,0,0,j*l-l/2)o.Size=UDim2.new(0,p,0,n)o.RichText=true o.Font=m o.TextSize=n o.BackgroundTransparency=1 o.Text=d o.Parent=f if h~=#i+1 then local a=Instance.new("TextLabel")a.Text=j a.Font=m a.TextSize=n a.Size=UDim2.new(1,0,0,l)a.TextXAlignment=Enum.TextXAlignment.Right a.TextColor3=x a.Position=UDim2.new(0,0,0,j*l-l/2)a.BackgroundTransparency=1 a.Parent=g end d=""e=""c=nil j+=1 updateZIndex()updateCanvasSize()if j%5==0 then b.Heartbeat:Wait()end elseif o.Char==" "then d=d..o.Char e=e..o.Char elseif o.Char=="\t"then d=d..string.rep(" ",4)e=e..o.Char else if o.Color==c then d=d..autoEscape(o.Char)else d=d..string.format("%s<font color=\"rgb(%d,%d,%d)\">",c and"</font>"or"",o.Color.R*255,o.Color.G*255,o.Color.B*255)d=d..autoEscape(o.Char)c=o.Color end e=e..o.Char end end updateZIndex()updateCanvasSize()end function onFrameSizeChange()local a=d.AbsoluteSize e.Size=UDim2.new(0,a.X,0,a.Y)end function updateCanvasSize()e.CanvasSize=UDim2.new(0,k,0,j*l)end function updateZIndex()for a,b in pairs(d:GetDescendants())do if b:IsA("GuiObject")then b.ZIndex=d.ZIndex end end end function c.init(b,a)if typeof(a)=="Instance"and a:IsA("Frame")then a:ClearAllChildren()d=a e=Instance.new("ScrollingFrame")f=Instance.new("Frame")g=Instance.new("Frame")local b=a.AbsoluteSize e.Name="HIGHLIGHT_IDE"e.Size=UDim2.new(0,b.X,0,b.Y)e.BackgroundColor3=o e.BorderSizePixel=0 e.ScrollBarThickness=4 f.Name=""f.Size=UDim2.new(1,-40,1,0)f.Position=UDim2.new(0,40,0,0)f.BackgroundTransparency=1 g.Name=""g.Size=UDim2.new(0,25,1,0)g.BackgroundTransparency=1 f.Parent=e g.Parent=e e.Parent=d render();(d:GetPropertyChangedSignal("AbsoluteSize")):Connect(onFrameSizeChange);(d:GetPropertyChangedSignal("ZIndex")):Connect(updateZIndex)else error("Initialization error: argument "..(typeof(a).." is not a Frame Instance"))end end function c.setRaw(c,a)a=a.."\n"i={}local d=1 for c=1,#a,1 do table.insert(i,{Char=a:sub(c,c),Color=v})if c%1000==0 then b.Heartbeat:Wait()end end render()end function c.getRaw(a)local b=""for a,c in pairs(i)do b=b..c.Char end return b end function c.getString(a)local b=""for a,c in pairs(i)do b=b..c.Char:sub(1,1)end return b end function c.getTable(a)return i end function c.getSize(a)return#i end function c.getLine(b,a)local c=0 local d=false local e=""for a,b in pairs(i)do c=c+1 if b.Char=="\n"and not d then d=true end if d and b.Char~="\n"then e=e..b.Char elseif d then break end end return e end function c.setLine(d,a,b)if#i and a>=i[#i].Line then for a=i[#i].Line,a,1 do table.insert(i,{Char="\n",Line=a;Color=v})local d=c:getRaw()d=d:sub(0,#d)..b c:setRaw(d)return end elseif not(#i)then return end local e=c:getRaw()local f=0 local g=0 for d in gfind(e,"\n")do g=g+1 if a==g then e=e:sub(0,f)..(b..e:sub(d,#e))c:setRaw(e)return end end error("Unable to set line")end function c.insertLine(d,a,b)if#i and a>=i[#i].Line then c:setLine(a,b)elseif not(#i)then return end local e=c:getRaw()local f=0 local g=0 for d in gfind(e,"\n")do g=g+1 if a==g then e=e:sub(0,f)..("\n"..(b..("\n"..e:sub(d,#e))))c:setRaw(e)return end end error("Unable to insert line")end local I={}function I.new(...)local a=c local b={}a.__index=a setmetatable(b,a)b:init(...)return b end return I
+local cloneref  = cloneref or function(...)
+    return ...
+end
+
+local TextService = cloneref(game:GetService("TextService"))
+local RunService = cloneref(game:FindService("RunService"))
+--- The Highlight class
+--- @class Highlight
+local Highlight = {}
+
+-- PRIVATE METHODS/PROPERTIES --
+
+--[[
+    Char Object:
+    {
+        Char: string -- A single character
+        Color: Color3 -- The intended color of the char
+        Line: number -- The line number
+    }
+]]
+
+local parentFrame
+local scrollingFrame
+local textFrame
+local lineNumbersFrame
+local lines = {}
+
+--- Contents of the table- array of char objects
+local tableContents = {}
+
+local line = 0
+local largestX = 0
+
+local lineSpace = 15
+local font = Enum.Font.Ubuntu
+local textSize = 14
+
+local backgroundColor = Color3.fromRGB(40, 44, 52)
+local operatorColor = Color3.fromRGB(187, 85, 255)
+local functionColor = Color3.fromRGB(97, 175, 239)
+local stringColor = Color3.fromRGB(152, 195, 121)
+local numberColor = Color3.fromRGB(209, 154, 102)
+local booleanColor = numberColor
+local objectColor = Color3.fromRGB(229, 192, 123)
+local defaultColor = Color3.fromRGB(224, 108, 117)
+local commentColor = Color3.fromRGB(148, 148, 148)
+local lineNumberColor = commentColor
+local genericColor = Color3.fromRGB(240, 240, 240)
+
+local operators = {"^(function)[^%w_]", "^(local)[^%w_]", "^(if)[^%w_]", "^(for)[^%w_]", "^(while)[^%w_]", "^(then)[^%w_]", "^(do)[^%w_]", "^(else)[^%w_]", "^(elseif)[^%w_]", "^(return)[^%w_]", "^(end)[^%w_]", "^(continue)[^%w_]", "^(and)[^%w_]", "^(not)[^%w_]", "^(or)[^%w_]", "[^%w_](or)[^%w_]", "[^%w_](and)[^%w_]", "[^%w_](not)[^%w_]", "[^%w_](continue)[^%w_]", "[^%w_](function)[^%w_]", "[^%w_](local)[^%w_]", "[^%w_](if)[^%w_]", "[^%w_](for)[^%w_]", "[^%w_](while)[^%w_]", "[^%w_](then)[^%w_]", "[^%w_](do)[^%w_]", "[^%w_](else)[^%w_]", "[^%w_](elseif)[^%w_]", "[^%w_](return)[^%w_]", "[^%w_](end)[^%w_]"}
+--- In this case, patterns could not be used, so just the string characters are provided
+local strings = {{"\"", "\""}, {"'", "'"}, {"%[%[", "%]%]", true}}
+local comments = {"%-%-%[%[[^%]%]]+%]?%]?", "(%-%-[^\n]+)"}
+local functions = {"[^%w_]([%a_][%a%d_]*)%s*%(", "^([%a_][%a%d_]*)%s*%(", "[:%.%(%[%p]([%a_][%a%d_]*)%s*%("}
+local numbers = {"[^%w_](%d+[eE]?%d*)", "[^%w_](%.%d+[eE]?%d*)", "[^%w_](%d+%.%d+[eE]?%d*)", "^(%d+[eE]?%d*)", "^(%.%d+[eE]?%d*)", "^(%d+%.%d+[eE]?%d*)"}
+local booleans = {"[^%w_](true)", "^(true)", "[^%w_](false)", "^(false)", "[^%w_](nil)", "^(nil)"}
+local objects = {"[^%w_:]([%a_][%a%d_]*):", "^([%a_][%a%d_]*):"}
+local other = {"[^_%s%w=>~<%-%+%*]", ">", "~", "<", "%-", "%+", "=", "%*"}
+local offLimits = {}
+
+--- Determines if index is in a string
+function isOffLimits(index)
+    for _, v in next, offLimits do
+        if index >= v[1] and index <= v[2] then
+            return true
+        end
+    end
+    return false
+end
+
+--- Find iterator
+-- function gfind(str, pattern)
+--     local start = 0
+--     return function()
+--         local findStart, findEnd = str:find(pattern, start)
+--         if findStart and findEnd ~= #str then
+--             start = findEnd + 1
+--             return findStart, findEnd
+--         else
+--             return nil
+--         end
+--     end
+-- end
+
+--- Find iterator
+function gfind(str, pattern)
+    return coroutine.wrap(function()
+        local start = 0
+        while true do
+            local findStart, findEnd = str:find(pattern, start)
+            if findStart and findEnd ~= #str then
+                start = findEnd + 1
+                coroutine.yield(findStart, findEnd)
+            else
+                return
+            end
+        end
+    end)
+end
+
+--- Finds and highlights comments with `commentColor`
+function renderComments()
+    local str = Highlight:getRaw()
+    local step = 1
+    for _, pattern in next, comments do
+        for commentStart, commentEnd in gfind(str, pattern) do
+            if step % 1000 == 0 then
+                RunService.Heartbeat:Wait()
+            end
+            step += 1
+            if not isOffLimits(commentStart) then
+                for i = commentStart, commentEnd do
+                    table.insert(offLimits, {commentStart, commentEnd})
+                    if tableContents[i] then
+                        tableContents[i].Color = commentColor
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- Finds and highlights strings with `stringColor`
+function renderStrings()
+    local stringType
+    local stringEndType
+    local ignoreBackslashes
+    local stringStart
+    local stringEnd
+    local offLimitsIndex
+    local skip = false
+    
+    for i, char in next, tableContents do
+        if stringType then
+            char.Color = stringColor
+            local possibleString = ""
+            for k = stringStart, i do
+                possibleString = possibleString .. tableContents[k].Char
+            end
+            if char.Char:match(stringEndType) and not not ignoreBackslashes or (possibleString:match("(\\*)" .. stringEndType .. "$") and #possibleString:match("(\\*)" .. stringEndType .. "$") % 2 == 0) then
+                skip = true
+                stringType = nil
+                stringEndType = nil
+                ignoreBackslashes = nil
+                stringEnd = i
+                offLimits[offLimitsIndex][2] = stringEnd
+            end
+        end
+        if not skip then
+            for _, v in next, strings do
+                if char.Char:match(v[1]) and not isOffLimits(i) then
+                    stringType = v[1]
+                    stringEndType = v[2]
+                    ignoreBackslashes = v[3]
+                    char.Color = stringColor
+                    stringStart = i
+                    offLimitsIndex = #offLimits + 1
+                    offLimits[offLimitsIndex] = {stringStart, math.huge}
+                end
+            end
+        end
+        skip = false
+    end
+end
+
+--- Highlights the specified patterns with the specified color
+--- @param patternArray string[]
+---@param color userdata
+function highlightPattern(patternArray, color)
+    local str = Highlight:getRaw()
+    local step = 1
+    for _, pattern in next, patternArray do
+        for findStart, findEnd in gfind(str, pattern) do
+            if step % 1000 == 0 then
+                RunService.Heartbeat:Wait()
+            end
+            step += 1
+            if not isOffLimits(findStart) and not isOffLimits(findEnd) then
+                for i = findStart, findEnd do
+                    if tableContents[i] then
+                        tableContents[i].Color = color
+                    end
+                end
+            end
+        end
+    end
+end
+
+--- Automatically replaces reserved chars with escape chars
+--- @param s string
+function autoEscape(s)
+    for i = 0, #s do
+        local char = string.sub(s, i, i)
+        if char == "<" then
+            s = string.format("%s%s%s", string.sub(s, 0, i - 1), "&lt;", string.sub(s, i + 1, -1))
+            i += 3
+        elseif char == ">" then
+            s = string.format("%s%s%s", string.sub(s, 0, i - 1), "&gt;", string.sub(s, i + 1, -1))
+            i += 3
+        elseif char == '"' then
+            s = string.format("%s%s%s", string.sub(s, 0, i - 1), "&quot;", string.sub(s, i + 1, -1))
+            i += 5
+        elseif char == "'" then
+            s = string.format("%s%s%s", string.sub(s, 0, i - 1), "&apos;", string.sub(s, i + 1, -1))
+            i += 5
+        elseif char == "&" then
+            s = string.format("%s%s%s", string.sub(s, 0, i - 1), "&amp;", string.sub(s, i + 1, -1))
+            i += 4
+        end
+    end
+    -- s:gsub("<", "&lt;")
+    -- s:gsub(">", "&gt;")
+    -- s:gsub('"', "&quot;")
+    -- s:gsub("'", "&apos;")
+    -- s:gsub("&", "&amp;")
+    return s
+end
+
+--- Main function for syntax highlighting tableContents
+function render()
+    offLimits = {}
+    lines = {}
+    textFrame:ClearAllChildren()
+    lineNumbersFrame:ClearAllChildren()
+
+    highlightPattern(functions, functionColor)
+    highlightPattern(numbers, numberColor)
+    highlightPattern(operators, operatorColor)
+    highlightPattern(objects, objectColor)
+    highlightPattern(booleans, booleanColor)
+    highlightPattern(other, genericColor)
+    renderComments()
+    renderStrings()
+
+    local lastColor
+    local lineStr = ""
+    local rawStr = ""
+    largestX = 0
+    line = 1
+
+    for i = 1, #tableContents + 1 do
+        local char = tableContents[i]
+        if i == #tableContents + 1 or char.Char == "\n" then
+            lineStr = lineStr .. (lastColor and "</font>" or "")
+
+            local lineText = Instance.new("TextLabel")
+            local x = TextService:GetTextSize(rawStr, textSize, font, Vector2.new(math.huge, math.huge)).X + 60
+
+            if x > largestX then
+                largestX = x
+            end
+
+            lineText.TextXAlignment = Enum.TextXAlignment.Left
+            lineText.TextYAlignment = Enum.TextYAlignment.Top
+            lineText.Position = UDim2.new(0, 0, 0, line * lineSpace - lineSpace / 2)
+            lineText.Size = UDim2.new(0, x, 0, textSize)
+            lineText.RichText = true
+            lineText.Font = font
+            lineText.TextSize = textSize
+            lineText.BackgroundTransparency = 1
+            lineText.Text = lineStr
+            lineText.Parent = textFrame
+
+            if i ~= #tableContents + 1 then
+                local lineNumber = Instance.new("TextLabel")
+                lineNumber.Text = line
+                lineNumber.Font = font
+                lineNumber.TextSize = textSize
+                lineNumber.Size = UDim2.new(1, 0, 0, lineSpace)
+                lineNumber.TextXAlignment = Enum.TextXAlignment.Right
+                lineNumber.TextColor3 = lineNumberColor
+                lineNumber.Position = UDim2.new(0, 0, 0, line * lineSpace - lineSpace / 2)
+                lineNumber.BackgroundTransparency = 1
+                lineNumber.Parent = lineNumbersFrame
+            end
+
+            lineStr = ""
+            rawStr = ""
+            lastColor = nil
+            line += 1
+            updateZIndex()
+            updateCanvasSize()
+            if line % 5 == 0 then
+                RunService.Heartbeat:Wait()
+            end
+        elseif char.Char == " " then
+            lineStr = lineStr .. char.Char
+            rawStr = rawStr .. char.Char
+        elseif char.Char == "\t" then
+            lineStr = lineStr .. string.rep(" ", 4)
+            rawStr = rawStr .. char.Char
+        else
+            if char.Color == lastColor then
+                lineStr = lineStr .. autoEscape(char.Char)
+            else
+                lineStr = lineStr .. string.format('%s<font color="rgb(%d,%d,%d)">', lastColor and "</font>" or "", char.Color.R * 255, char.Color.G * 255, char.Color.B * 255)
+                lineStr = lineStr .. autoEscape(char.Char)
+                lastColor = char.Color
+            end
+            rawStr = rawStr .. char.Char
+        end
+    end
+    updateZIndex()
+    updateCanvasSize()
+end
+
+function onFrameSizeChange()
+    local newSize = parentFrame.AbsoluteSize
+    scrollingFrame.Size = UDim2.new(0, newSize.X, 0, newSize.Y)
+end
+
+function updateCanvasSize()
+    -- local codeSize = Vector2.new(TextService:GetTextSize(Highlight:getRaw(), textSize, font, Vector2.new(math.huge, math.huge)).X + 60, #lines * lineSpace + 60)
+    scrollingFrame.CanvasSize = UDim2.new(0, largestX, 0, line * lineSpace)
+end
+
+function updateZIndex()
+    for _, v in next, parentFrame:GetDescendants() do
+        if v:IsA("GuiObject") then
+            v.ZIndex = parentFrame.ZIndex
+        end
+    end
+end
+
+-- PUBLIC METHODS --
+
+--- Runs when a new object is instantiated
+--- @param frame userdata
+function Highlight:init(frame)
+    if typeof(frame) == "Instance" and frame:IsA("Frame") then
+        frame:ClearAllChildren()
+
+        parentFrame = frame
+        scrollingFrame = Instance.new("ScrollingFrame")
+        textFrame = Instance.new("Frame")
+        lineNumbersFrame = Instance.new("Frame")
+
+        local parentSize = frame.AbsoluteSize
+        scrollingFrame.Size = UDim2.new(0, parentSize.X, 0, parentSize.Y)
+        scrollingFrame.BackgroundColor3 = backgroundColor
+        scrollingFrame.BorderSizePixel = 0
+        scrollingFrame.ScrollBarThickness = 4
+
+        textFrame.Size = UDim2.new(1, -40, 1, 0)
+        textFrame.Position = UDim2.new(0, 40, 0, 0)
+        textFrame.BackgroundTransparency = 1
+
+        lineNumbersFrame.Size = UDim2.new(0, 25, 1, 0)
+        lineNumbersFrame.BackgroundTransparency = 1
+
+        textFrame.Parent = scrollingFrame
+        lineNumbersFrame.Parent = scrollingFrame
+        scrollingFrame.Parent = parentFrame
+
+        render()
+        parentFrame:GetPropertyChangedSignal("AbsoluteSize"):Connect(onFrameSizeChange)
+        parentFrame:GetPropertyChangedSignal("ZIndex"):Connect(updateZIndex)
+    else
+        error("Initialization error: argument " .. typeof(frame) .. " is not a Frame Instance")
+    end
+end
+
+--- Sets the raw text of the code box (\n = new line, \t converted to spaces)
+--- @param raw string
+function Highlight:setRaw(raw)
+    raw = raw .. "\n"
+    tableContents = {}
+    local line = 1
+    for i = 1, #raw do
+        table.insert(tableContents, {
+            Char = raw:sub(i, i),
+            Color = defaultColor,
+            -- Line = line
+        })
+        if i % 1000 == 0 then
+            RunService.Heartbeat:Wait()
+        end
+        -- if raw:sub(i, i) == "\n" then
+        --     line = line + 1
+        -- end
+    end
+    render()
+end
+
+--- Returns the (string) raw text of the code box (\n = new line). This includes placeholder characters so it should only be used internally.
+--- @return string
+function Highlight:getRaw()
+    local result = ""
+    for _, char in next, tableContents do
+        result = result .. char.Char
+    end
+    return result
+end
+
+--- Returns the (string) text of the code box (\n = new line)
+--- @return string
+function Highlight:getString()
+    local result = ""
+    for _, char in next, tableContents do
+        result = result .. char.Char:sub(1, 1)
+    end
+    return result
+end
+
+--- Returns the (char[]) array that holds all the lines in order as strings
+--- @return table[]
+function Highlight:getTable()
+    return tableContents
+end
+
+--- Returns the (int) number of lines in the code box
+--- @return number
+function Highlight:getSize()
+    return #tableContents
+end
+
+--- Returns the (string) line of the specified line number
+--- @param line number
+--- @return string
+function Highlight:getLine(line)
+    local currentline = 0
+    local rightLine = false
+    local result = ""
+    for _, v in next, tableContents do
+        currentline = currentline + 1
+        if v.Char == "\n" and not rightLine then
+            rightLine = true
+        end
+        if rightLine and v.Char ~= "\n" then
+            result = result .. v.Char
+        elseif rightLine then
+            break
+        end
+    end
+    return result
+end
+
+--- Replaces the specified line number with the specified string (\n will overwrite further lines)
+--- @param line number
+---@param text string
+function Highlight:setLine(line, text)
+    if #tableContents and line >= tableContents[#tableContents].Line then
+        for i = tableContents[#tableContents].Line, line do
+            table.insert(tableContents, {
+                Char = "\n",
+                Line = i,
+                Color = defaultColor
+            })
+            local str = Highlight:getRaw()
+            str = str:sub(0, #str) .. text
+            Highlight:setRaw(str)
+            return
+        end
+    elseif not #tableContents then
+        return
+    end
+    local str = Highlight:getRaw()
+    local lastStart = 0
+    local currentLine = 0
+    for i in gfind(str, "\n") do
+        currentLine = currentLine + 1
+        if line == currentLine then
+            str = str:sub(0, lastStart) .. text .. str:sub(i, #str)
+            Highlight:setRaw(str)
+            return
+        end
+    end
+    error("Unable to set line")
+end
+
+--- Inserts a line made from the specified string and moves all existing lines down (\n will insert further lines)
+--- @param line number
+---@param text string
+function Highlight:insertLine(line, text)
+    if #tableContents and line >= tableContents[#tableContents].Line then
+        Highlight:setLine(line, text)
+    elseif not #tableContents then
+        return
+    end
+    local str = Highlight:getRaw()
+    local lastStart = 0
+    local currentLine = 0
+    for i in gfind(str, "\n") do
+        currentLine = currentLine + 1
+        if line == currentLine then
+            str = str:sub(0, lastStart) .. "\n" .. text .. "\n" .. str:sub(i, #str)
+            Highlight:setRaw(str)
+            return
+        end
+    end
+    error("Unable to insert line")
+end
+
+-- CONSTRUCTOR --
+
+local constructor = {}
+--- responsible for instantiation
+function constructor.new(...)
+    local class = Highlight
+    local new = {}
+    class.__index = class
+    setmetatable(new, class)
+    new:init(...)
+    return new
+end
+
+return constructor
