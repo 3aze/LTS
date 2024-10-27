@@ -7,8 +7,18 @@ local Mouse = LocalPlayer:GetMouse()
 local PresetColor = Color3.fromRGB(44, 120, 224)
 local CloseBind = Enum.KeyCode.RightControl
 
+local function rng(length)
+    local charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    local result = ""
+    for i = 1, length do
+        local rand = math.random(1, #charset)
+        result = result .. charset:sub(rand, rand)
+    end
+    return result
+end
+
 local ui = Instance.new("ScreenGui")
-ui.Name = "ui"
+ui.Name = rng(15)
 ui.Parent = game.CoreGui
 ui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
