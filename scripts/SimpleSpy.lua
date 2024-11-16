@@ -1,3 +1,19 @@
+--[[
+    SimpleSpy v2.2 SOURCE
+
+    SimpleSpy is a lightweight penetration testing tool that logs remote calls.
+
+    Credits:
+        exx - basically everything
+        Frosty - GUI to Lua
+]]
+
+--[[
+
+  Modification Made By - REDz
+  
+]]
+
 -- shuts down the previous instance of SimpleSpy
 if _G.SimpleSpyExecuted and type(_G.SimpleSpyShutdown) == "function" then
 	print(pcall(_G.SimpleSpyShutdown))
@@ -7,7 +23,7 @@ local Players = game:GetService("Players")
 local CoreGui = game:GetService("CoreGui")
 local Highlight =
 	loadstring(
-		game:HttpGet("https://raw.githubusercontent.com/3aze/LTS/refs/heads/main/modules/highlight.lua")
+		game:HttpGet("https://github.com/exxtremestuffs/SimpleSpySource/raw/master/highlight.lua")
 	)()
 
 ---- GENERATED (kinda sorta mostly) BY GUI to LUA ----
