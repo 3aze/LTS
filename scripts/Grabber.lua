@@ -1,85 +1,56 @@
--- Create GUI elements
-local coordgui = Instance.new("ScreenGui")
-local main = Instance.new("Frame")
-local title = Instance.new("TextLabel")
-local credit = Instance.new("TextLabel")
-local grab = Instance.new("TextButton")
-local copy = Instance.new("TextButton")
-local cords = Instance.new("TextLabel")
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "CoordGui"
+screenGui.Parent = game.CoreGui
 
--- Set properties
-coordgui.Name = "coordgui"
-coordgui.Parent = game.CoreGui
-
-main.Name = "main"
-main.Parent = coordgui
+local main = Instance.new("Frame", screenGui)
+main.Name = "Main"
 main.BackgroundColor3 = Color3.new(1, 1, 1)
-main.Position = UDim2.new(0.352638364, 0, 0.405797124, 0)
+main.Position = UDim2.new(0.35, 0, 0.41, 0)
 main.Size = UDim2.new(0, 228, 0, 142)
 main.Style = Enum.FrameStyle.DropShadow
 main.Active = true
 main.Draggable = true
 
-title.Name = "title"
-title.Parent = main
-title.BackgroundColor3 = Color3.new(0, 0, 0)
-title.Position = UDim2.new(-0.0517418832, 0, -0.054933358, 0)
-title.Size = UDim2.new(0, 235, 0, 19)
-title.Font = Enum.Font.SciFi
-title.Text = "Coordinates Grabber"
-title.TextColor3 = Color3.new(1, 1, 1)
-title.TextSize = 14
-
-credit.Name = "credit"
-credit.Parent = main
-credit.BackgroundColor3 = Color3.new(0, 0, 0)
-credit.Position = UDim2.new(-0.0517418832, 0, 0.930982113, 0)
-credit.Size = UDim2.new(0, 235, 0, 19)
-credit.Font = Enum.Font.SciFi
-credit.Text = "Made By mqtcm"
-credit.TextColor3 = Color3.new(1, 1, 1)
-credit.TextSize = 14
-
-grab.Name = "grab"
-grab.Parent = main
-grab.BackgroundColor3 = Color3.new(0, 0, 0)
-grab.Position = UDim2.new(0.0381504558, 0, 0.600263834, 0)
-grab.Size = UDim2.new(0, 128, 0, 31)
-grab.Font = Enum.Font.SciFi
-grab.Text = "Grab Coordinates"
-grab.TextColor3 = Color3.new(1, 1, 1)
-grab.TextSize = 14
-
-copy.Name = "copy"
-copy.Parent = main
-copy.BackgroundColor3 = Color3.new(0, 0, 0)
-copy.Position = UDim2.new(0.697107434, 0, 0.595215261, 0)
-copy.Size = UDim2.new(0, 52, 0, 32)
-copy.Font = Enum.Font.SciFi
-copy.Text = "Copy"
-copy.TextColor3 = Color3.new(1, 1, 1)
-copy.TextSize = 14
-
-cords.Name = "cords"
-cords.Parent = main
-cords.BackgroundColor3 = Color3.new(0, 0, 0)
-cords.Position = UDim2.new(0.0420129336, 0, 0.199266031, 0)
-cords.Size = UDim2.new(0, 194, 0, 37)
-cords.Font = Enum.Font.SciFi
-cords.Text = ""
-cords.TextColor3 = Color3.new(1, 1, 1)
-cords.TextSize = 14
-
--- Scripts
-local function getCoordinates()
-    local player = game.Players.LocalPlayer
-    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local position = player.Character.HumanoidRootPart.Position
-        cords.Text = tostring(position)
-    end
+local function CreateLabel(name, text, position, size)
+    local label = Instance.new("TextLabel", main)
+    label.Name = name
+    label.BackgroundColor3 = Color3.new(0, 0, 0)
+    label.Position = position
+    label.Size = size
+    label.Font = Enum.Font.SciFi
+    label.Text = text
+    label.TextColor3 = Color3.new(1, 1, 1)
+    label.TextSize = 14
+    return label
 end
 
-grab.MouseButton1Down:Connect(getCoordinates)
+local function CreateButton(name, text, position, size)
+    local button = Instance.new("TextButton", main)
+    button.Name = name
+    button.BackgroundColor3 = Color3.new(0, 0, 0)
+    button.Position = position
+    button.Size = size
+    button.Font = Enum.Font.SciFi
+    button.Text = text
+    button.TextColor3 = Color3.new(1, 1, 1)
+    button.TextSize = 14
+    return button
+end
+
+local title = CreateLabel("Title", "Coordinates Grabber", UDim2.new(-0.05, 0, -0.05, 0), UDim2.new(0, 235, 0, 19))
+local credit = CreateLabel("Credit", "Made By mqtcm", UDim2.new(-0.05, 0, 0.93, 0), UDim2.new(0, 235, 0, 19))
+local coords = CreateLabel("Coords", "", UDim2.new(0.04, 0, 0.20, 0), UDim2.new(0, 194, 0, 37))
+
+local grab = CreateButton("Grab", "Grab Coordinates", UDim2.new(0.04, 0, 0.60, 0), UDim2.new(0, 128, 0, 31))
+local copy = CreateButton("Copy", "Copy", UDim2.new(0.70, 0, 0.60, 0), UDim2.new(0, 52, 0, 32))
+
+grab.MouseButton1Down:Connect(function()
+    local player = game.Players.LocalPlayer
+    if player and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        coords.Text = tostring(player.Character.HumanoidRootPart.Position)
+    end
+end)
+
 copy.MouseButton1Down:Connect(function()
-    setclipboard(cords.Text)
+    setclipboard(coords.Text)
 end)
