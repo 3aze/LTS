@@ -2,39 +2,48 @@ local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
 
-local function createElement(className, properties)
+local function CreateElement(className, properties)
     local element = Instance.new(className)
-    for key, value in pairs(properties) do
-        element[key] = value
+    for k, v in pairs(properties) do
+        element[k] = v
     end
     return element
 end
 
-local HttpSpy = createElement("ScreenGui", {
+local HttpSpy = CreateElement("ScreenGui", {
     Name = HttpService:GenerateGUID(false),
     Parent = gethui(),
     ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 })
 
-local function createFrame(parent, properties)
-    return createElement("Frame", {
-        Parent = parent,
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-        BorderSizePixel = 0,
-        properties
-    })
-end
-
-local MainFrame = createFrame(HttpSpy, {
+local MainFrame = CreateElement("Frame", {
+    Name = "MainFrame",
+    Parent = HttpSpy,
+    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+    BorderSizePixel = 0,
     Position = UDim2.new(0.05, 0, 0.25, 0),
     Size = UDim2.new(0, 400, 0, 300)
 })
 
-createElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = MainFrame})
+local UICorner = CreateElement("UICorner", {
+    CornerRadius = UDim.new(0, 10),
+    Parent = MainFrame
+})
 
-local TitleBar = createFrame(MainFrame, {Size = UDim2.new(1, 0, 0, 30)})
-createElement("UICorner", {CornerRadius = UDim.new(0, 10), Parent = TitleBar})
-createElement("TextLabel", {
+local TitleBar = CreateElement("Frame", {
+    Name = "TitleBar",
+    Parent = MainFrame,
+    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+    BorderSizePixel = 0,
+    Size = UDim2.new(1, 0, 0, 30)
+})
+
+CreateElement("UICorner", {
+    CornerRadius = UDim.new(0, 10),
+    Parent = TitleBar
+})
+
+local TitleText = CreateElement("TextLabel", {
     Name = "TitleText",
     Parent = TitleBar,
     BackgroundTransparency = 1,
@@ -47,7 +56,7 @@ createElement("TextLabel", {
     TextXAlignment = Enum.TextXAlignment.Left
 })
 
-local MinimizeButton = createElement("TextButton", {
+local MinimizeButton = CreateElement("TextButton", {
     Name = "MinimizeButton",
     Parent = TitleBar,
     BackgroundTransparency = 1,
@@ -59,7 +68,7 @@ local MinimizeButton = createElement("TextButton", {
     TextSize = 20
 })
 
-local MainContainer = createElement("ScrollingFrame", {
+local MainContainer = CreateElement("ScrollingFrame", {
     Name = "MainContainer",
     Parent = MainFrame,
     BackgroundTransparency = 1,
@@ -69,44 +78,35 @@ local MainContainer = createElement("ScrollingFrame", {
     ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
 })
 
-local function createDraggable(gui)
-    local dragging, dragInput, dragStart, startPos
-    local function update(input)
-        local delta = input.Position - dragStart
-        gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-    gui.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = input.Position
-            startPos = gui.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-    gui.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            dragInput = input
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            update(input)
-        end
-    end)
-end
+local UIListLayout = CreateElement("UIListLayout", {
+    Parent = MainContainer,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 5)
+})
 
-local NotificationFrame = createFrame(HttpSpy, {
+CreateElement("UIPadding", {
+    Parent = MainContainer,
+    PaddingLeft = UDim.new(0, 10),
+    PaddingRight = UDim.new(0, 10),
+    PaddingTop = UDim.new(0, 10)
+})
+
+local NotificationFrame = CreateElement("Frame", {
+    Name = "NotificationFrame",
+    Parent = HttpSpy,
+    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+    BorderSizePixel = 0,
     Position = UDim2.new(1, -220, 1, -60),
     Size = UDim2.new(0, 200, 0, 40),
     Visible = false
 })
 
-createElement("UICorner", {CornerRadius = UDim.new(0, 5), Parent = NotificationFrame})
-createElement("TextLabel", {
+CreateElement("UICorner", {
+    CornerRadius = UDim.new(0, 5),
+    Parent = NotificationFrame
+})
+
+local NotificationText = CreateElement("TextLabel", {
     Name = "NotificationText",
     Parent = NotificationFrame,
     BackgroundTransparency = 1,
@@ -117,7 +117,10 @@ createElement("TextLabel", {
     Text = "Log copied to clipboard!"
 })
 
+-- Variables
 local isMinimized = false
+
+-- Functions
 local function toggleMinimize()
     isMinimized = not isMinimized
     MainContainer.Visible = not isMinimized
@@ -125,10 +128,61 @@ local function toggleMinimize()
     MinimizeButton.Text = isMinimized and "+" or "-"
 end
 
+local function createDraggable(gui)
+    local dragging, dragInput, dragStart, startPos
+
+    local function update(input)
+        local delta = input.Position - dragStart
+        gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+
+    gui.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = gui.Position
+
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+
+    gui.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            update(input)
+        end
+    end)
+end
+
+local function updateCanvasSize()
+    MainContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
+end
+
+local function showNotification()
+    NotificationFrame.Visible = true
+    task.delay(2, function()
+        NotificationFrame.Visible = false
+    end)
+end
+
+local function formatLogEntry(method, url, headers)
+    if not url then return "" end
+    return url
+end
+
 local function createLogEntry(method, url, headers)
-    if not url then return end
-    local logText = url
-    local LogEntry = createElement("TextButton", {
+    local logText = formatLogEntry(method, url, headers)
+    
+    local LogEntry = CreateElement("TextButton", {
         BackgroundColor3 = Color3.fromRGB(35, 35, 35),
         BorderSizePixel = 0,
         Size = UDim2.new(1, 0, 0, 30),
@@ -143,8 +197,16 @@ local function createLogEntry(method, url, headers)
         Parent = MainContainer
     })
 
-    createElement("UICorner", {CornerRadius = UDim.new(0, 5), Parent = LogEntry})
-    createElement("UIPadding", {Parent = LogEntry, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+    CreateElement("UICorner", {
+        CornerRadius = UDim.new(0, 5),
+        Parent = LogEntry
+    })
+
+    CreateElement("UIPadding", {
+        Parent = LogEntry,
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+    })
 
     local textSize = TextService:GetTextSize(
         logText,
@@ -155,6 +217,7 @@ local function createLogEntry(method, url, headers)
     LogEntry.Size = UDim2.new(1, 0, 0, math.max(30, textSize.Y + 10))
 
     local OriginalColor = LogEntry.BackgroundColor3
+
     LogEntry.MouseEnter:Connect(function()
         LogEntry.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
     end)
@@ -167,48 +230,40 @@ local function createLogEntry(method, url, headers)
         setclipboard(logText)
         showNotification()
     end)
+
+    updateCanvasSize()
 end
 
-local function showNotification()
-    NotificationFrame.Visible = true
-    task.delay(2, function()
-        NotificationFrame.Visible = false
-    end)
-end
-
+-- Event Connections
 MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
-UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function() 
-    MainContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
-end)
+UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
 
+-- Initialize
 createDraggable(MainFrame)
-toggleMinimize()
+updateCanvasSize()
 
-local function logRequest(method, url)
-    createLogEntry(method, url)
-end
-
+-- HTTP Spy Logic
 local HttpGet
 HttpGet = hookfunction(game.HttpGet, function(self, url, ...)
-    logRequest("HTTP GET", url)
+    createLogEntry("HTTP GET", url)
     return HttpGet(self, url, ...)
 end)
 
 local HttpPost
 HttpPost = hookfunction(game.HttpPost, function(self, url, ...)
-    logRequest("HTTP POST", url)
+    createLogEntry("HTTP POST", url)
     return HttpPost(self, url, ...)
 end)
 
 local RequestLog
 if syn and syn.request then
     RequestLog = hookfunction(syn.request, function(dat)
-        logRequest(dat.Method or "REQUEST", dat.Url, dat.Headers)
+        createLogEntry(dat.Method or "REQUEST", dat.Url, dat.Headers)
         return RequestLog(dat)
     end)
 elseif request then
     RequestLog = hookfunction(request, function(dat)
-        logRequest(dat.Method or "REQUEST", dat.Url, dat.Headers)
+        createLogEntry(dat.Method or "REQUEST", dat.Url, dat.Headers)
         return RequestLog(dat)
     end)
 else
