@@ -1,0 +1,79 @@
+-- Wait for game to load
+if not game:IsLoaded() then
+    print("Waiting for game to load...")
+    game.Loaded:Wait()
+    print("Loaded")
+end
+
+-- Initialize library
+local library = loadstring(game:HttpGet('https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua'))()
+local Version = "V1.7.1"
+
+-- Get services
+local replicated_storage = game:GetService("ReplicatedStorage")
+local local_player = game:GetService("Players").LocalPlayer
+
+library:Notify("Ran Auto Farm Script Current Version: " .. Version)
+library:Notify("Adding an option soon to use modifiers")
+
+-- Setup lobby only if player exists
+if not local_player then
+    library:Notify("Error: Local player not found")
+    return
+end
+
+-- Path to commonly used services
+local knit_path = replicated_storage:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services")
+local lobby_service = knit_path:WaitForChild("LobbyService"):WaitForChild("RF")
+
+-- Create the lobby
+lobby_service:WaitForChild("CreateLobby"):InvokeServer("Auto Farm Made By @kylosilly", 1, 0, "Private")
+library:Notify("Lobby Created")
+
+-- Configure map and difficulty
+lobby_service:WaitForChild("ChangeValue"):InvokeServer("Map", "Cargo")
+library:Notify("Changed Map To Cargo")
+
+lobby_service:WaitForChild("ChangeValue"):InvokeServer("Difficulty", "Insanity")
+library:Notify("Changed Difficulty To Insanity")
+
+-- Function to apply modifiers
+local function applyModifiers(modifiers)
+    library:Notify("Applying Modifiers")
+    for _, modifier in ipairs(modifiers) do
+        lobby_service:WaitForChild("ChangeValue"):InvokeServer("Modifier", modifier, true)
+    end
+end
+
+-- Base modifiers for prestige 1+
+local baseModifiers = {"Depleted", "Marathon", "WeakLegs"}
+
+-- Additional modifiers by prestige level
+local prestigeModifiers = {
+    [1] = baseModifiers,
+    [2] = {"Depleted", "Marathon", "WeakLegs", "BlownFusebox", "NoHiding", "NoRecovery"},
+    [4] = {"Depleted", "Marathon", "WeakLegs", "BlownFusebox", "NoHiding", "NoRecovery", "Countdown"},
+    [5] = {"Depleted", "Marathon", "WeakLegs", "BlownFusebox", "NoHiding", "NoRecovery", "Countdown", "Bloodlust"},
+    [10] = {"Depleted", "Marathon", "WeakLegs", "BlownFusebox", "NoHiding", "NoRecovery", "Countdown", "Bloodlust", "Nightmare"}
+}
+
+-- Apply modifiers based on prestige level
+local prestige = local_player:GetAttribute("Prestige")
+
+if prestige and prestige > 0 then
+    -- Find the highest applicable preset for the player's prestige
+    local highestApplicableKey = 0
+    for key in pairs(prestigeModifiers) do
+        if prestige >= key and key > highestApplicableKey then
+            highestApplicableKey = key
+        end
+    end
+    
+    if highestApplicableKey > 0 then
+        applyModifiers(prestigeModifiers[highestApplicableKey])
+    end
+end
+
+-- Start the game
+library:Notify("Starting Game")
+lobby_service:WaitForChild("AttemptStart"):InvokeServer()
