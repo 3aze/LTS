@@ -1,0 +1,549 @@
+if not game:IsLoaded() then
+    print("Waiting for game to load...")
+    game.Loaded:Wait()
+    print("Loaded")
+end
+
+task.wait(5)
+
+-- Load library
+local library = loadstring(game:HttpGet('https://raw.githubusercontent.com/violin-suzutsuki/LinoriaLib/main/Library.lua'))()
+local Version = "V1.8.0"
+
+library:Notify("Loaded Auto Farm. Current Version: " .. Version)
+library:Notify("Auto Farm Made By @kylosilly On Discord <3")
+
+-- Services
+local services = {
+    VIM = game:GetService("VirtualInputManager"),
+    RS = game:GetService("ReplicatedStorage"),
+    TCS = game:GetService("TextChatService"),
+    LS = game:GetService("Lighting"),
+    TS = game:GetService("TeleportService"),
+    RunService = game:GetService("RunService"),
+    Players = game:GetService("Players")
+}
+
+local local_player = services.Players.LocalPlayer
+local workspace = game:GetService("Workspace")
+local camera = workspace.CurrentCamera
+
+-- Game paths
+local paths = {
+    evidence = {
+        fingerprints = workspace.Dynamic.Evidence.Fingerprints,
+        motions = workspace.Dynamic.Evidence.MotionGrids,
+        orbs = workspace.Dynamic.Evidence.Orbs,
+        emf = workspace.Dynamic.Evidence.EMF
+    },
+    sinks = workspace.Map.EventObjects.Sinks,
+    van = {
+        equipment = workspace.Van.Equipment,
+        button = workspace.Van.Close,
+        van = workspace.Van
+    },
+    map = workspace:FindFirstChild("Map"),
+    packages = services.RS:WaitForChild("Packages"):WaitForChild("Knit"):WaitForChild("Services")
+}
+
+local rooms = paths.map.Rooms
+
+-- Evidence tracking
+local evidence = {
+    fingerprint = false,
+    spirit_box = false,
+    emf_five = false,
+    freezing = false,
+    no_freezing = false,
+    writing = false,
+    no_writing = false,
+    motion = false,
+    no_motion = false,
+    orb = false
+}
+
+-- Progress tracking
+local progress = {
+    collected_equipment = false,
+    collected_bone = false,
+    started_round = false,
+    got_room = false
+}
+
+-- Check flags
+local checks = {
+    fingerprint = true,
+    info = true,
+    emf = true,
+    orb = true
+}
+
+-- Room information
+local ghost_info = {
+    room = nil,
+    room_name = nil
+}
+
+-- Setup lighting for better visibility
+services.LS.ClockTime = 12
+services.LS.GlobalShadows = false
+
+-- Validate executor
+if not hookmetamethod then
+    local_player:Kick("Your Executor Doesn't Support HookMetaMethod")
+end
+
+-- Setup evidence detection
+paths.evidence.emf.ChildAdded:Connect(function(emf)
+    if emf.Name == "EMF5" and checks.emf then
+        library:Notify("Found EMF5")
+        print("Got EMF5")
+        evidence.emf_five = true
+        checks.emf = false
+    end
+end)
+
+paths.evidence.fingerprints.ChildAdded:Connect(function(fingerprint)
+    if fingerprint:IsA("Part") and checks.fingerprint then
+        library:Notify("Found Fingerprint")
+        print("Got Fingerprint")
+        evidence.fingerprint = true
+        checks.fingerprint = false
+    end
+end)
+
+paths.evidence.orbs.ChildAdded:Connect(function(orb)
+    if orb:IsA("Part") and checks.orb then
+        library:Notify("Found Orbs")
+        print("Got Orbs")
+        evidence.orb = true
+        checks.orb = false
+    end
+end)
+
+local motion_connection = services.RunService.RenderStepped:Connect(function()
+    for _, motion in pairs(paths.evidence.motions:GetDescendants()) do
+        if motion:IsA("Part") then
+            if motion.Color == Color3.fromRGB(252, 52, 52) then
+                library:Notify("Found Motion")
+                print("Found Motion")
+                evidence.motion = true
+                motion_connection:Disconnect()
+                break
+            elseif motion.BrickColor == BrickColor.new("Toothpaste") then
+                library:Notify("No Motion")
+                print("No Motion")
+                evidence.no_motion = true
+                motion_connection:Disconnect()
+                break
+            end
+        end
+    end
+end)
+
+-- Helper functions
+local function firePrompt(prompt)
+    if prompt then
+        fireproximityprompt(prompt)
+    end
+end
+
+local function teleportTo(destination, offset)
+    offset = offset or Vector3.new(0, 0, 0)
+    local_player.Character.HumanoidRootPart.CFrame = destination.CFrame + offset
+end
+
+local function invokeServer(service, method, ...)
+    return paths.packages:WaitForChild(service):WaitForChild("RF"):WaitForChild(method):InvokeServer(...)
+end
+
+local function selectEquipment(slot)
+    services.VIM:SendKeyEvent(true, Enum.KeyCode[slot], false, nil)
+    task.wait(0.25)
+end
+
+local function toggleEquipment(name)
+    invokeServer("InventoryService", "Toggle", name)
+end
+
+local function getEquipmentModel(slot)
+    return local_player.Character:FindFirstChild("EquipmentModel") and local_player.Character.EquipmentModel:FindFirstChild(slot)
+end
+
+local function pickupEquipment(equipment)
+    teleportTo(equipment.PrimaryPart, Vector3.new(0, 5, 0))
+    invokeServer("InventoryService", "PickupItem", equipment)
+end
+
+local function dropEquipment(slot)
+    invokeServer("InventoryService", "Drop", slot)
+end
+
+local function updateGuess(ghost)
+    invokeServer("PlayerService", "UpdateGuess", ghost)
+    teleportTo(paths.van.button)
+    task.wait(0.25)
+    firePrompt(paths.van.button:FindFirstChildOfClass("ProximityPrompt"))
+end
+
+local function simulateMouseClick()
+    local viewX, viewY = camera.ViewportSize.X/2, camera.ViewportSize.Y/2
+    services.VIM:SendMouseButtonEvent(viewX, viewY, 0, true, game, 1)
+    task.wait(0.1)
+    services.VIM:SendMouseButtonEvent(viewX, viewY, 0, false, game, 1)
+end
+
+-- Drop any held item at start
+selectEquipment("One")
+dropEquipment(1)
+
+-- Verify player info
+if local_player then
+    local device = local_player:GetAttribute("Device")
+    local gid = local_player:GetAttribute("GID")
+    local join_time = local_player:GetAttribute("Join")
+
+    if device and gid and join_time then
+        print("Semi Auto Farm Script Made By @kylosilly On Discord <3")
+        print("------------------------------------------------------")
+        print("Debug Info Ignore This!")
+        print("Device: " .. device)
+        print("LocalPlayer GID: " .. gid)
+        print("Join Time: " .. os.date("%Y-%m-%d %H:%M:%S", join_time))
+        print("------------------------------------------------------")
+        checks.info = true
+    end
+else
+    local_player:Kick("Couldn't get attributes of localplayer please report this to @kylosilly on discord!")
+    task.wait(1)
+    services.TS:Teleport(8267733039)
+end
+
+-- Collect bone if available
+if checks.info then
+    local bone = paths.map:FindFirstChild("Bone")
+    if bone then
+        local last_pos = local_player.Character.HumanoidRootPart.CFrame
+        local bone_prompt = bone:FindFirstChildOfClass("ProximityPrompt")
+        
+        teleportTo(bone, Vector3.new(0, 5, 0))
+        task.wait(.5)
+        firePrompt(bone_prompt)
+        task.wait(.5)
+        local_player.Character.HumanoidRootPart.CFrame = last_pos
+        library:Notify("Collected Bone")
+    else
+        library:Notify("No Bone Found, Skipping")
+    end
+    progress.collected_bone = true
+end
+
+task.wait(2.5)
+
+-- Start the round
+if progress.collected_bone then
+    local last_pos = local_player.Character.HumanoidRootPart.CFrame
+    local van_prompt = paths.van.button:FindFirstChildOfClass("ProximityPrompt")
+
+    if van_prompt then
+        teleportTo(van_prompt.Parent, Vector3.new(3, 0, 0))
+        camera.CFrame = van_prompt.Parent.CFrame
+        task.wait(1)
+        firePrompt(van_prompt)
+        task.wait(1)
+        local_player.Character.HumanoidRootPart.CFrame = last_pos
+        progress.started_round = true
+    end
+end
+
+-- Collect required equipment
+if progress.started_round then
+    for _, equipment in next, paths.van.equipment:GetChildren() do
+        if equipment:IsA("Model") and (equipment.Name == "EMF Reader" or equipment.Name == "Thermometer" or equipment.Name == "Spirit Box") then
+            pickupEquipment(equipment)
+            progress.collected_equipment = true
+        end
+    end
+
+    if not progress.collected_equipment then
+        local_player:Kick("Equipment not found! Please report this to @kylosilly on discord!")
+        task.wait(1)
+        services.TS:Teleport(8267733039)
+    end
+
+    -- Find ghost room with EMF reader
+    if progress.collected_equipment then
+        selectEquipment("Two")
+        local emf_tool = getEquipmentModel("2")
+        local emf = getEquipmentModel("1")
+
+        if not emf_tool then
+            local_player:Kick("EMF tool not found! Please report this to @kylosilly on discord!")
+            task.wait(2.5)
+            services.TS:Teleport(8267733039)
+        end
+
+        if not emf or emf.Color ~= Color3.fromRGB(52, 142, 64) then
+            toggleEquipment("EMF Reader")
+        end
+
+        for _, room in next, rooms:GetChildren() do
+            if room:IsA("Folder") then
+                local hitbox = room:FindFirstChild("Hitbox")
+                if hitbox then
+                    teleportTo(hitbox)
+                    camera.CFrame = hitbox.CFrame
+                    task.wait(.75)
+
+                    if emf_tool.Color == Color3.fromRGB(131, 156, 49) then
+                        ghost_info.room = hitbox.CFrame
+                        ghost_info.room_name = room.Name
+                        progress.got_room = true
+                        library:Notify("Got ghost room: " .. room.Name .. " (It Not Might Be Always The Ghost Room!)")
+                        break
+                    end
+                end
+            end
+        end
+
+        if not progress.got_room then
+            local_player:Kick("Ghost room not found! Please report this to @kylosilly on discord!")
+            task.wait(1)
+            services.TS:Teleport(8267733039)
+        end
+    end
+
+    -- Hook room value to ensure evidence collection works
+    if progress.got_room and hookmetamethod then
+        library:Notify("Hooking LocalPlayer Room Value To Ghost Room...")
+        local old
+        old = hookmetamethod(game, "__namecall", function(self, ...)
+            local args = {...}
+            local method = getnamecallmethod()
+
+            if method == "InvokeServer" and self.Name == "UpdateRoom" and not checkcaller() then
+                args[1] = ghost_info.room_name
+                return old(self, unpack(args))
+            end
+            return old(self, ...)
+        end)
+    end    
+
+    -- Check for freezing temperature
+    selectEquipment("One")
+    local thermometer = local_player.Character and local_player.Character:FindFirstChild("EquipmentModel") and 
+                         local_player.Character.EquipmentModel:FindFirstChild("Temp") and 
+                         local_player.Character.EquipmentModel.Temp:FindFirstChild("SurfaceGui") and 
+                         local_player.Character.EquipmentModel.Temp.SurfaceGui:FindFirstChild("TextLabel")
+    toggleEquipment("Thermometer")
+
+    if not thermometer then
+        local_player:Kick("Thermometer not found! Please report this to @kylosilly on discord!")
+        task.wait(2.5)
+        services.TS:Teleport(8267733039)
+    end
+
+    if thermometer then
+        teleportTo(ghost_info.room)
+        task.wait(8)
+        local temperature = tonumber(thermometer.Text:match("[-%d]+"))
+        
+        if temperature and temperature < 0 then
+            library:Notify("Got Freezing Temperature")
+            print("Got Freezing Temperature")
+            evidence.freezing = true
+        else
+            library:Notify("No Freezing Temperature")
+            print("No Freezing Temperature")
+            evidence.no_freezing = true
+        end
+    end
+
+    -- Check for spirit box
+    selectEquipment("Three")
+    local spirit_box = local_player.Character and local_player.Character:FindFirstChild("EquipmentModel") and 
+                        local_player.Character.EquipmentModel:FindFirstChild("Main")
+    toggleEquipment("Spirit Box")
+
+    if not spirit_box then
+        local_player:Kick("Spirit box not found! Please report this to @kylosilly on discord!")
+        task.wait(2.5)
+        services.TS:Teleport(8267733039)
+    end
+
+    if spirit_box then
+        local responses
+        responses = spirit_box.DescendantAdded:Connect(function(reply)
+            if reply:IsA("BillboardGui") then
+                dropEquipment(3)
+                responses:Disconnect()
+                evidence.spirit_box = true
+                library:Notify("Got Spirit Box")
+                print("Got Spirit Box")
+            end
+        end)
+
+        for i = 1, 15 do
+            services.TCS:FindFirstChild("TextChannels").RBXGeneral:SendAsync("Where are you?")
+            task.wait(.5)
+            if evidence.spirit_box then break end
+        end
+
+        if not evidence.spirit_box then
+            dropEquipment(3)
+            library:Notify("No Spirit Box")
+            print("No Spirit Box")
+        end
+    end
+
+    -- Check for motion
+    for _, equipment in pairs(paths.van.equipment:GetChildren()) do
+        if equipment:IsA("Model") and equipment.Name == "Motion Sensor" then
+            pickupEquipment(equipment)
+            teleportTo(ghost_info.room)
+            camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + Vector3.new(1, -2.5, 0))
+            task.wait(.75)
+            simulateMouseClick()
+            task.wait(.1)
+            teleportTo(paths.van.van.PrimaryPart, Vector3.new(0, 5, 0))
+            break
+        end
+    end
+
+    task.wait(5)
+
+    if not paths.evidence.motions then
+        local_player:Kick("Motion sensor not found! Please report this to @kylosilly on discord!")
+        task.wait(2.5)
+        services.TS:Teleport(8267733039)
+    end
+
+    task.wait(8)
+
+    -- Trigger motion sensor with ghost
+    local last_pos = {}
+    for _, motion_grid in pairs(paths.evidence.motions:GetDescendants()) do
+        if motion_grid:IsA("Part") then
+            last_pos[motion_grid] = motion_grid.CFrame
+            local ghost = workspace.NPCs:FindFirstChildOfClass("Model")
+            if ghost then
+                motion_grid.CFrame = ghost.HumanoidRootPart.CFrame + Vector3.new(1, 0, 0)
+            end
+        end
+    end
+
+    task.wait(1)
+
+    for v, pos in pairs(last_pos) do
+        v.CFrame = pos
+    end
+
+    -- Check for ghost writing
+    task.wait(1)
+    for _, equipment in pairs(paths.van.equipment:GetChildren()) do
+        if equipment:IsA("Model") and equipment.Name == "Book" then
+            pickupEquipment(equipment)
+            teleportTo(ghost_info.room)
+            camera.CFrame = CFrame.new(camera.CFrame.Position, camera.CFrame.Position + Vector3.new(-1, -2.5, 0))
+            task.wait(.75)
+            simulateMouseClick()
+            task.wait(.25)
+
+            local book = workspace.Equipment.Book
+            teleportTo(CFrame.new(-223, 166, -213))
+
+            if not book then
+                local_player:Kick("Book not found! Please report this to @kylosilly on discord!")
+                task.wait(2.5)
+                services.TS:Teleport(8267733039)
+            end
+
+            library:Notify("Waiting For Writing (This Will Take 1 Minute So Be Patient)")
+            task.wait(60)
+
+            if book:FindFirstChild("LeftPage") and book.LeftPage:FindFirstChildOfClass("Decal") and 
+               book:FindFirstChild("RightPage") and book.RightPage:FindFirstChildOfClass("Decal") then
+                library:Notify("Found Writing")
+                print("Got Writing")
+                evidence.writing = true
+            else
+                library:Notify("No Writing")
+                print("No Writing")
+                evidence.no_writing = true
+            end
+            
+            teleportTo(paths.van.van.PrimaryPart, Vector3.new(0, 3, 0))
+            break
+        end
+    end
+
+    -- Check for dirty water
+    for _, sink in next, paths.sinks:GetChildren() do
+        if sink.Transparency < 1 then
+            library:Notify("Found Dirty Water In Sink")
+            local sink_prompt = sink:FindFirstChildOfClass("ProximityPrompt")
+            teleportTo(sink_prompt.Parent)
+            task.wait(0.5)
+            firePrompt(sink_prompt)
+            task.wait(0.5)
+            teleportTo(paths.van.van.PrimaryPart, Vector3.new(0, 3, 0))
+            break
+        end
+    end
+
+    -- Determine ghost type and submit guess
+    local ghost_types = {
+        -- Evidence combinations mapped to ghost types
+        {emf_five = true, fingerprint = true, freezing = true, ghost = "Banshee"},
+        {freezing = true, spirit_box = true, orb = true, ghost = "Mare"},
+        {motion = true, spirit_box = true, freezing = true, ghost = "Wendigo"},
+        {spirit_box = true, fingerprint = true, orb = true, ghost = "Poltergeist"},
+        {freezing = true, orb = true, emf_five = true, ghost = "Phantom"},
+        {emf_five = true, motion = true, orb = true, ghost = "Jinn"},
+        {emf_five = true, freezing = true, motion = true, ghost = "Upyr"},
+        {emf_five = true, fingerprint = true, spirit_box = true, ghost = "Aswang"},
+        {orb = true, fingerprint = true, freezing = true, ghost = "Thaye"},
+        {emf_five = true, fingerprint = true, orb = true, ghost = "O Tokata"},
+        {motion = true, emf_five = true, spirit_box = true, ghost = "Myling"},
+        {motion = true, freezing = true, orb = true, ghost = "Afarit"},
+        {motion = true, emf_five = true, fingerprint = true, ghost = "Preta"},
+        {motion = true, freezing = true, fingerprint = true, ghost = "Yokai"},
+        {writing = true, spirit_box = true, freezing = true, ghost = "Demon"},
+        {writing = true, fingerprint = true, spirit_box = true, ghost = "Spirit"},
+        {emf_five = true, writing = true, fingerprint = true, ghost = "Revenant"},
+        {emf_five = true, writing = true, orb = true, ghost = "Shade"},
+        {freezing = true, writing = true, orb = true, ghost = "Yurei"},
+        {motion = true, writing = true, spirit_box = true, ghost = "Oni"},
+        {orb = true, writing = true, spirit_box = true, ghost = "Egui"},
+        {orb = true, fingerprint = true, writing = true, ghost = "Wisp"},
+        {motion = true, fingerprint = true, writing = true, ghost = "Douen"},
+        {motion = true, writing = true, emf_five = true, ghost = "Goryo"},
+        {spirit_box = true, writing = true, emf_five = true, ghost = "Mimic"},
+        {motion = true, writing = true, freezing = true, ghost = "Bhuta"}
+    }
+
+    local identified = false
+    for _, ghost_type in ipairs(ghost_types) do
+        local matches = true
+        for evidence_type, required in pairs(ghost_type) do
+            if evidence_type ~= "ghost" and evidence[evidence_type] ~= required then
+                matches = false
+                break
+            end
+        end
+        
+        if matches then
+            library:Notify("Ghost is: " .. ghost_type.ghost)
+            updateGuess(ghost_type.ghost)
+            identified = true
+            break
+        end
+    end
+
+    if not identified then
+        library:Notify("Couldn't Guess Ghost, Teleporting Back To Lobby...")
+        teleportTo(paths.van.button)
+        task.wait(0.25)
+        firePrompt(paths.van.button:FindFirstChildOfClass("ProximityPrompt"))
+    end
+end
