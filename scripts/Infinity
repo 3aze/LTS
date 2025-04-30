@@ -94,7 +94,7 @@ local Library = loadstring(game:HttpGet(Repository .. "Library.lua"))()
 local ThemeManager = loadstring(game:HttpGet(Repository .. "addons/ThemeManager.lua"))()
 local SaveManager = loadstring(game:HttpGet(Repository .. "addons/SaveManager.lua"))()
 
-local Window = Library:CreateWindow({Title = "cca is a monkey ðŸ’", Footer = "Made by @s.eths | v1.4c", NotifySide = "Right", ShowCustomCursor = true})
+local Window = Library:CreateWindow({Title = "Bubble Gum Sim Inf", Footer = "v1.4c", NotifySide = "Right", ShowCustomCursor = true})
 
 local Tabs = {
     Main = Window:AddTab("Main", "user"),
