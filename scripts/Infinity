@@ -127,7 +127,7 @@ TabsMainFunctions:AddToggle("FasterEggs", {
 -- Quick Toggles
 local TabsToggles = Tabs.Main:AddLeftGroupbox("Quick Toggles")
 TabsToggles:AddButton({Text = "Toggle Best", Func = function()
-    for _, t in pairs({"AutoBlowBubbles", "AutoCollectPickups", "FasterEggs", "AutoClaimPlaytimeRewards", "AutoClaimSeasonRewards", "AutoClaimWheelSpin", "AutoClaimChests", "AutoBuyFromMarkets", "AutoGenieQuest"}) do
+    for _, t in pairs({"AutoBlowBubbles", "AutoCollectPickups", "FasterEggs", "AutoClaimPlaytimeRewards", "AutoClaimSeasonRewards", "AutoClaimWheelSpin", "AutoClaimChests", "AutoBuyFromMarkets"}) do
         Library.Toggles[t]:SetValue(true)
     end
 end, Tooltip = "WARNING: Toggles multiple features", Risky = true})
