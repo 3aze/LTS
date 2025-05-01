@@ -1,147 +1,370 @@
+--[[
+    HTTP Spy v2 - Advanced
+    
+    A clean, efficient, and feature-rich HTTP request monitor for Roblox
+    
+    Features:
+    - Tracks HTTP requests (GET, POST, all syn.request/request types)
+    - Clean, modern UI with proper scaling
+    - Draggable and resizable window
+    - Request filtering capabilities
+    - Copy request details to clipboard
+    - Automatically handles different executor environments
+]]
+
+-- Services
 local HttpService = game:GetService("HttpService")
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
+local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
-local function CreateElement(className, properties)
-    local element = Instance.new(className)
-    for k, v in pairs(properties) do
-        element[k] = v
+-- Constants
+local UI_CORNER_RADIUS = UDim.new(0, 10)
+local UI_SMALL_CORNER_RADIUS = UDim.new(0, 5)
+local MAIN_BG_COLOR = Color3.fromRGB(30, 30, 30)
+local TITLE_BG_COLOR = Color3.fromRGB(40, 40, 40)
+local ENTRY_BG_COLOR = Color3.fromRGB(35, 35, 35)
+local ENTRY_HOVER_COLOR = Color3.fromRGB(45, 45, 45)
+local TEXT_COLOR = Color3.fromRGB(255, 255, 255)
+local DIM_TEXT_COLOR = Color3.fromRGB(220, 220, 220)
+local ACCENT_COLOR = Color3.fromRGB(65, 105, 225) -- Royal Blue
+local DEFAULT_SIZE = UDim2.new(0, 500, 0, 350)
+local MINIMIZED_SIZE = UDim2.new(0, 500, 0, 30)
+local FONT_TITLE = Enum.Font.GothamBold
+local FONT_NORMAL = Enum.Font.GothamSemibold
+local FONT_MONO = Enum.Font.Code
+
+-- Configuration
+local CONFIG = {
+    maxLogs = 100,           -- Maximum number of logs to display before clearing old ones
+    fadeTime = 0.3,          -- Tween time for UI transitions
+    notificationDuration = 2 -- How long notifications stay visible
+}
+
+-- Utility Functions
+local Utility = {}
+
+function Utility.Create(className, properties, children)
+    local instance = Instance.new(className)
+    
+    for k, v in pairs(properties or {}) do
+        instance[k] = v
     end
-    return element
+    
+    for _, child in ipairs(children or {}) do
+        child.Parent = instance
+    end
+    
+    return instance
 end
 
-local HttpSpy = CreateElement("ScreenGui", {
-    Name = HttpService:GenerateGUID(false),
-    Parent = gethui(),
-    ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-})
-
-local MainFrame = CreateElement("Frame", {
-    Name = "MainFrame",
-    Parent = HttpSpy,
-    BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-    BorderSizePixel = 0,
-    Position = UDim2.new(0.05, 0, 0.25, 0),
-    Size = UDim2.new(0, 400, 0, 300)
-})
-
-local UICorner = CreateElement("UICorner", {
-    CornerRadius = UDim.new(0, 10),
-    Parent = MainFrame
-})
-
-local TitleBar = CreateElement("Frame", {
-    Name = "TitleBar",
-    Parent = MainFrame,
-    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-    BorderSizePixel = 0,
-    Size = UDim2.new(1, 0, 0, 30)
-})
-
-CreateElement("UICorner", {
-    CornerRadius = UDim.new(0, 10),
-    Parent = TitleBar
-})
-
-local TitleText = CreateElement("TextLabel", {
-    Name = "TitleText",
-    Parent = TitleBar,
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0, 10, 0, 0),
-    Size = UDim2.new(1, -40, 1, 0),
-    Font = Enum.Font.GothamSemibold,
-    Text = "HTTP Spy v2",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 14,
-    TextXAlignment = Enum.TextXAlignment.Left
-})
-
-local MinimizeButton = CreateElement("TextButton", {
-    Name = "MinimizeButton",
-    Parent = TitleBar,
-    BackgroundTransparency = 1,
-    Position = UDim2.new(1, -30, 0, 0),
-    Size = UDim2.new(0, 30, 1, 0),
-    Font = Enum.Font.GothamBold,
-    Text = "-",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 20
-})
-
-local MainContainer = CreateElement("ScrollingFrame", {
-    Name = "MainContainer",
-    Parent = MainFrame,
-    BackgroundTransparency = 1,
-    Position = UDim2.new(0, 0, 0, 30),
-    Size = UDim2.new(1, 0, 1, -30),
-    ScrollBarThickness = 4,
-    ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80)
-})
-
-local UIListLayout = CreateElement("UIListLayout", {
-    Parent = MainContainer,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0, 5)
-})
-
-CreateElement("UIPadding", {
-    Parent = MainContainer,
-    PaddingLeft = UDim.new(0, 10),
-    PaddingRight = UDim.new(0, 10),
-    PaddingTop = UDim.new(0, 10)
-})
-
-local NotificationFrame = CreateElement("Frame", {
-    Name = "NotificationFrame",
-    Parent = HttpSpy,
-    BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-    BorderSizePixel = 0,
-    Position = UDim2.new(1, -220, 1, -60),
-    Size = UDim2.new(0, 200, 0, 40),
-    Visible = false
-})
-
-CreateElement("UICorner", {
-    CornerRadius = UDim.new(0, 5),
-    Parent = NotificationFrame
-})
-
-local NotificationText = CreateElement("TextLabel", {
-    Name = "NotificationText",
-    Parent = NotificationFrame,
-    BackgroundTransparency = 1,
-    Size = UDim2.new(1, 0, 1, 0),
-    Font = Enum.Font.GothamSemibold,
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    TextSize = 14,
-    Text = "Log copied to clipboard!"
-})
-
--- Variables
-local isMinimized = false
-
--- Functions
-local function toggleMinimize()
-    isMinimized = not isMinimized
-    MainContainer.Visible = not isMinimized
-    MainFrame.Size = isMinimized and UDim2.new(0, 400, 0, 30) or UDim2.new(0, 400, 0, 300)
-    MinimizeButton.Text = isMinimized and "+" or "-"
+function Utility.CreateCorner(parent, radius)
+    return Utility.Create("UICorner", {
+        CornerRadius = radius or UI_CORNER_RADIUS,
+        Parent = parent
+    })
 end
 
-local function createDraggable(gui)
+function Utility.ApplyRounding(instance, radius)
+    Utility.CreateCorner(instance, radius)
+    return instance
+end
+
+function Utility.Tween(instance, properties, duration, easingStyle, easingDirection)
+    local tweenInfo = TweenInfo.new(
+        duration or CONFIG.fadeTime,
+        easingStyle or Enum.EasingStyle.Quad,
+        easingDirection or Enum.EasingDirection.Out
+    )
+    
+    local tween = TweenService:Create(instance, tweenInfo, properties)
+    tween:Play()
+    return tween
+end
+
+function Utility.FormatTime()
+    local time = os.date("*t")
+    return string.format("%02d:%02d:%02d", time.hour, time.min, time.sec)
+end
+
+function Utility.TruncateString(str, maxLength)
+    if #str <= maxLength then
+        return str
+    end
+    return str:sub(1, maxLength - 3) .. "..."
+end
+
+-- UI Components
+local UIComponents = {}
+
+function UIComponents.CreateButton(properties)
+    local button = Utility.Create("TextButton", properties)
+    local originalColor = button.BackgroundColor3
+    
+    button.MouseEnter:Connect(function()
+        Utility.Tween(button, {BackgroundColor3 = ENTRY_HOVER_COLOR})
+    end)
+    
+    button.MouseLeave:Connect(function()
+        Utility.Tween(button, {BackgroundColor3 = originalColor})
+    end)
+    
+    return button
+end
+
+-- Core HTTP Spy class
+local HttpSpy = {
+    Logs = {},
+    FilterText = "",
+    IsMinimized = false,
+    RequestCount = 0,
+    IsVisible = true
+}
+
+-- Initialize UI
+function HttpSpy:CreateUI()
+    -- Main ScreenGui
+    self.Gui = Utility.Create("ScreenGui", {
+        Name = HttpService:GenerateGUID(false),
+        Parent = (gethui and gethui()) or (get_hidden_gui and get_hidden_gui()) or game:GetService("CoreGui"),
+        ZIndexBehavior = Enum.ZIndexBehavior.Sibling,
+        ResetOnSpawn = false
+    })
+    
+    -- Main Frame
+    self.MainFrame = Utility.Create("Frame", {
+        Name = "HttpSpyFrame",
+        BackgroundColor3 = MAIN_BG_COLOR,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0.05, 0, 0.25, 0),
+        Size = DEFAULT_SIZE,
+        Parent = self.Gui
+    })
+    Utility.CreateCorner(self.MainFrame)
+    
+    -- Title Bar
+    self.TitleBar = Utility.Create("Frame", {
+        Name = "TitleBar",
+        BackgroundColor3 = TITLE_BG_COLOR,
+        BorderSizePixel = 0,
+        Size = UDim2.new(1, 0, 0, 30),
+        Parent = self.MainFrame
+    })
+    Utility.CreateCorner(self.TitleBar)
+    
+    -- Title Text
+    self.TitleText = Utility.Create("TextLabel", {
+        Name = "TitleText",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 10, 0, 0),
+        Size = UDim2.new(1, -110, 1, 0),
+        Font = FONT_TITLE,
+        Text = "HTTP Spy v2 Advanced",
+        TextColor3 = TEXT_COLOR,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        Parent = self.TitleBar
+    })
+    
+    -- Counter Label
+    self.CounterLabel = Utility.Create("TextLabel", {
+        Name = "Counter",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -100, 0, 0),
+        Size = UDim2.new(0, 40, 1, 0),
+        Font = FONT_NORMAL,
+        Text = "0",
+        TextColor3 = ACCENT_COLOR,
+        TextSize = 14,
+        Parent = self.TitleBar
+    })
+    
+    -- Minimize Button
+    self.MinimizeButton = UIComponents.CreateButton({
+        Name = "MinimizeButton",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -60, 0, 0),
+        Size = UDim2.new(0, 30, 1, 0),
+        Font = FONT_TITLE,
+        Text = "-",
+        TextColor3 = TEXT_COLOR,
+        TextSize = 20,
+        Parent = self.TitleBar
+    })
+    
+    -- Clear Button
+    self.ClearButton = UIComponents.CreateButton({
+        Name = "ClearButton",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -30, 0, 0),
+        Size = UDim2.new(0, 30, 1, 0),
+        Font = FONT_TITLE,
+        Text = "×",
+        TextColor3 = TEXT_COLOR,
+        TextSize = 20,
+        Parent = self.TitleBar
+    })
+    
+    -- Filter Bar
+    self.FilterBar = Utility.Create("Frame", {
+        Name = "FilterBar",
+        BackgroundColor3 = TITLE_BG_COLOR,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 30),
+        Size = UDim2.new(1, 0, 0, 30),
+        Parent = self.MainFrame
+    })
+    
+    -- Filter Input
+    self.FilterInput = Utility.Create("TextBox", {
+        Name = "FilterInput",
+        BackgroundColor3 = ENTRY_BG_COLOR,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 10, 0.5, -12),
+        Size = UDim2.new(1, -20, 0, 24),
+        Font = FONT_NORMAL,
+        PlaceholderText = "Filter requests...",
+        Text = "",
+        TextColor3 = TEXT_COLOR,
+        TextSize = 14,
+        ClearTextOnFocus = false,
+        Parent = self.FilterBar
+    })
+    Utility.CreateCorner(self.FilterInput, UI_SMALL_CORNER_RADIUS)
+    
+    -- Main Container
+    self.MainContainer = Utility.Create("ScrollingFrame", {
+        Name = "MainContainer",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 0, 0, 60),
+        Size = UDim2.new(1, 0, 1, -60),
+        ScrollBarThickness = 6,
+        ScrollBarImageColor3 = Color3.fromRGB(80, 80, 80),
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        Parent = self.MainFrame
+    })
+    
+    -- Layout for Container
+    self.ListLayout = Utility.Create("UIListLayout", {
+        Padding = UDim.new(0, 5),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Parent = self.MainContainer
+    })
+    
+    -- Padding for Container
+    Utility.Create("UIPadding", {
+        PaddingLeft = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+        Parent = self.MainContainer
+    })
+    
+    -- Notification Frame
+    self.NotificationFrame = Utility.Create("Frame", {
+        Name = "NotificationFrame",
+        BackgroundColor3 = ACCENT_COLOR,
+        BorderSizePixel = 0,
+        Position = UDim2.new(1, -220, 1, -60),
+        Size = UDim2.new(0, 200, 0, 40),
+        Visible = false,
+        Parent = self.Gui
+    })
+    Utility.CreateCorner(self.NotificationFrame, UI_SMALL_CORNER_RADIUS)
+    
+    -- Notification Text
+    self.NotificationText = Utility.Create("TextLabel", {
+        Name = "NotificationText",
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, 0, 1, 0),
+        Font = FONT_NORMAL,
+        TextColor3 = TEXT_COLOR,
+        TextSize = 14,
+        Text = "Copied to clipboard!",
+        Parent = self.NotificationFrame
+    })
+    
+    -- Resize Handle
+    self.ResizeHandle = Utility.Create("TextButton", {
+        Name = "ResizeHandle",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -15, 1, -15),
+        Size = UDim2.new(0, 15, 0, 15),
+        Text = "⟲",
+        TextColor3 = DIM_TEXT_COLOR,
+        Font = FONT_TITLE,
+        TextSize = 14,
+        ZIndex = 10,
+        Parent = self.MainFrame
+    })
+end
+
+-- Event handling
+function HttpSpy:SetupEvents()
+    -- Minimize toggle
+    self.MinimizeButton.MouseButton1Click:Connect(function()
+        self:ToggleMinimize()
+    end)
+    
+    -- Clear logs
+    self.ClearButton.MouseButton1Click:Connect(function()
+        self:ClearLogs()
+    end)
+    
+    -- Filter input changes
+    self.FilterInput.Changed:Connect(function(prop)
+        if prop == "Text" then
+            self.FilterText = self.FilterInput.Text:lower()
+            self:ApplyFilter()
+        end
+    end)
+    
+    -- Update canvas size when layout changes
+    self.ListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        self:UpdateCanvasSize()
+    end)
+    
+    -- Setup dragging
+    self:MakeDraggable(self.MainFrame, self.TitleBar)
+    
+    -- Setup resizing
+    self:MakeResizable()
+    
+    -- Toggle visibility with key combo (RightShift + H)
+    UserInputService.InputBegan:Connect(function(input, gameProcessed)
+        if not gameProcessed and input.KeyCode == Enum.KeyCode.H and UserInputService:IsKeyDown(Enum.KeyCode.RightShift) then
+            self:ToggleVisibility()
+        end
+    end)
+end
+
+-- Core functionality
+function HttpSpy:ToggleMinimize()
+    self.IsMinimized = not self.IsMinimized
+    self.FilterBar.Visible = not self.IsMinimized
+    self.MainContainer.Visible = not self.IsMinimized
+    self.MinimizeButton.Text = self.IsMinimized and "+" or "-"
+    
+    Utility.Tween(self.MainFrame, {
+        Size = self.IsMinimized and MINIMIZED_SIZE or DEFAULT_SIZE
+    })
+end
+
+function HttpSpy:ToggleVisibility()
+    self.IsVisible = not self.IsVisible
+    self.Gui.Enabled = self.IsVisible
+end
+
+function HttpSpy:MakeDraggable(gui, dragpart)
     local dragging, dragInput, dragStart, startPos
-
-    local function update(input)
-        local delta = input.Position - dragStart
-        gui.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-    end
-
-    gui.InputBegan:Connect(function(input)
+    
+    dragpart.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             dragging = true
             dragStart = input.Position
             startPos = gui.Position
-
+            
             input.Changed:Connect(function()
                 if input.UserInputState == Enum.UserInputState.End then
                     dragging = false
@@ -149,123 +372,310 @@ local function createDraggable(gui)
             end)
         end
     end)
-
-    gui.InputChanged:Connect(function(input)
+    
+    dragpart.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
             dragInput = input
         end
     end)
-
+    
     UserInputService.InputChanged:Connect(function(input)
         if input == dragInput and dragging then
-            update(input)
+            local delta = input.Position - dragStart
+            gui.Position = UDim2.new(
+                startPos.X.Scale, 
+                startPos.X.Offset + delta.X, 
+                startPos.Y.Scale, 
+                startPos.Y.Offset + delta.Y
+            )
         end
     end)
 end
 
-local function updateCanvasSize()
-    MainContainer.CanvasSize = UDim2.new(0, 0, 0, UIListLayout.AbsoluteContentSize.Y + 20)
-end
-
-local function showNotification()
-    NotificationFrame.Visible = true
-    task.delay(2, function()
-        NotificationFrame.Visible = false
+function HttpSpy:MakeResizable()
+    local resizing, resizeStart, originalSize
+    
+    self.ResizeHandle.MouseButton1Down:Connect(function()
+        resizing = true
+        resizeStart = UserInputService:GetMouseLocation()
+        originalSize = self.MainFrame.Size
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            resizing = false
+        end
+    end)
+    
+    RunService.RenderStepped:Connect(function()
+        if resizing and not self.IsMinimized then
+            local delta = UserInputService:GetMouseLocation() - resizeStart
+            local newSize = UDim2.new(
+                originalSize.X.Scale,
+                math.max(300, originalSize.X.Offset + delta.X),
+                originalSize.Y.Scale,
+                math.max(200, originalSize.Y.Offset + delta.Y)
+            )
+            self.MainFrame.Size = newSize
+        end
     end)
 end
 
-local function formatLogEntry(method, url, headers)
-    if not url then return "" end
-    return url
+function HttpSpy:UpdateCanvasSize()
+    self.MainContainer.CanvasSize = UDim2.new(
+        0, 0, 
+        0, self.ListLayout.AbsoluteContentSize.Y + 20
+    )
 end
 
-local function createLogEntry(method, url, headers)
-    local logText = formatLogEntry(method, url, headers)
+function HttpSpy:ShowNotification(message)
+    self.NotificationText.Text = message
+    self.NotificationFrame.Visible = true
     
-    local LogEntry = CreateElement("TextButton", {
-        BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+    Utility.Tween(self.NotificationFrame, {
+        Position = UDim2.new(1, -220, 1, -60),
+        BackgroundTransparency = 0
+    })
+    
+    task.delay(CONFIG.notificationDuration, function()
+        Utility.Tween(self.NotificationFrame, {
+            Position = UDim2.new(1, -220, 1, -40),
+            BackgroundTransparency = 1
+        }, CONFIG.fadeTime, nil, nil).Completed:Wait()
+        self.NotificationFrame.Visible = false
+    end)
+end
+
+function HttpSpy:AddLogEntry(method, url, headers, body)
+    if not url then return end
+    
+    -- Increment counter
+    self.RequestCount = self.RequestCount + 1
+    self.CounterLabel.Text = tostring(self.RequestCount)
+    
+    -- Create log data
+    local logData = {
+        id = self.RequestCount,
+        method = method or "REQUEST",
+        url = url,
+        headers = headers or {},
+        body = body,
+        timestamp = Utility.FormatTime()
+    }
+    
+    table.insert(self.Logs, 1, logData)
+    
+    -- Create UI entry
+    local displayUrl = Utility.TruncateString(url, 60)
+    local entry = UIComponents.CreateButton({
+        Name = "LogEntry_" .. self.RequestCount,
+        BackgroundColor3 = ENTRY_BG_COLOR,
         BorderSizePixel = 0,
-        Size = UDim2.new(1, 0, 0, 30),
-        Font = Enum.Font.SourceSansSemibold,
-        TextColor3 = Color3.fromRGB(220, 220, 220),
+        Size = UDim2.new(1, 0, 0, 40),
+        AutoButtonColor = false,
+        Font = FONT_NORMAL,
+        TextColor3 = DIM_TEXT_COLOR,
         TextSize = 14,
-        TextWrapped = true,
+        TextTruncate = Enum.TextTruncate.AtEnd,
         TextXAlignment = Enum.TextXAlignment.Left,
         TextYAlignment = Enum.TextYAlignment.Center,
-        AutoButtonColor = false,
-        Text = logText,
-        Parent = MainContainer
+        LayoutOrder = -self.RequestCount, -- Reverse order
+        Parent = self.MainContainer
     })
-
-    CreateElement("UICorner", {
-        CornerRadius = UDim.new(0, 5),
-        Parent = LogEntry
+    
+    -- Method badge
+    local methodLabel = Utility.Create("TextLabel", {
+        Name = "MethodLabel",
+        BackgroundColor3 = ACCENT_COLOR,
+        BorderSizePixel = 0,
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 50, 0, 20),
+        Font = FONT_NORMAL,
+        Text = string.upper(string.sub(method or "REQ", 1, 4)),
+        TextColor3 = TEXT_COLOR,
+        TextSize = 12,
+        Parent = entry
     })
-
-    CreateElement("UIPadding", {
-        Parent = LogEntry,
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
+    Utility.CreateCorner(methodLabel, UI_SMALL_CORNER_RADIUS)
+    
+    -- URL 
+    local urlLabel = Utility.Create("TextLabel", {
+        Name = "UrlLabel",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(0, 60, 0, 0),
+        Size = UDim2.new(1, -70, 1, 0),
+        Font = FONT_NORMAL,
+        Text = displayUrl,
+        TextColor3 = TEXT_COLOR,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        Parent = entry
     })
-
-    local textSize = TextService:GetTextSize(
-        logText,
-        LogEntry.TextSize,
-        LogEntry.Font,
-        Vector2.new(MainContainer.AbsoluteSize.X - 40, math.huge)
-    )
-    LogEntry.Size = UDim2.new(1, 0, 0, math.max(30, textSize.Y + 10))
-
-    local OriginalColor = LogEntry.BackgroundColor3
-
-    LogEntry.MouseEnter:Connect(function()
-        LogEntry.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+    
+    -- Time indicator
+    local timeLabel = Utility.Create("TextLabel", {
+        Name = "TimeLabel",
+        BackgroundTransparency = 1,
+        Position = UDim2.new(1, -60, 0, 0),
+        Size = UDim2.new(0, 50, 0, 20),
+        Font = FONT_MONO,
+        Text = logData.timestamp,
+        TextColor3 = DIM_TEXT_COLOR,
+        TextSize = 10,
+        Parent = entry
+    })
+    
+    Utility.CreateCorner(entry, UI_SMALL_CORNER_RADIUS)
+    
+    -- Click to copy
+    entry.MouseButton1Click:Connect(function()
+        -- Format full details
+        local details = string.format(
+            "URL: %s\nMethod: %s\nTimestamp: %s",
+            logData.url,
+            logData.method,
+            logData.timestamp
+        )
+        
+        if logData.headers and next(logData.headers) then
+            details = details .. "\n\nHeaders:\n"
+            for k, v in pairs(logData.headers) do
+                details = details .. string.format("%s: %s\n", k, tostring(v))
+            end
+        end
+        
+        if logData.body then
+            details = details .. "\n\nBody:\n" .. tostring(logData.body)
+        end
+        
+        setclipboard(details)
+        self:ShowNotification("Request details copied!")
     end)
-
-    LogEntry.MouseLeave:Connect(function()
-        LogEntry.BackgroundColor3 = OriginalColor
-    end)
-
-    LogEntry.MouseButton1Click:Connect(function()
-        setclipboard(logText)
-        showNotification()
-    end)
-
-    updateCanvasSize()
+    
+    -- Apply filter immediately
+    entry.Visible = self:ShouldShowEntry(logData)
+    
+    -- Limit log size
+    if #self.Logs > CONFIG.maxLogs then
+        local oldLog = table.remove(self.Logs)
+        local oldEntry = self.MainContainer:FindFirstChild("LogEntry_" .. oldLog.id)
+        if oldEntry then
+            oldEntry:Destroy()
+        end
+    end
+    
+    self:UpdateCanvasSize()
+    return logData
 end
 
--- Event Connections
-MinimizeButton.MouseButton1Click:Connect(toggleMinimize)
-UIListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(updateCanvasSize)
-
--- Initialize
-createDraggable(MainFrame)
-updateCanvasSize()
-
--- HTTP Spy Logic
-local HttpGet
-HttpGet = hookfunction(game.HttpGet, function(self, url, ...)
-    createLogEntry("HTTP GET", url)
-    return HttpGet(self, url, ...)
-end)
-
-local HttpPost
-HttpPost = hookfunction(game.HttpPost, function(self, url, ...)
-    createLogEntry("HTTP POST", url)
-    return HttpPost(self, url, ...)
-end)
-
-local RequestLog
-if syn and syn.request then
-    RequestLog = hookfunction(syn.request, function(dat)
-        createLogEntry(dat.Method or "REQUEST", dat.Url, dat.Headers)
-        return RequestLog(dat)
-    end)
-elseif request then
-    RequestLog = hookfunction(request, function(dat)
-        createLogEntry(dat.Method or "REQUEST", dat.Url, dat.Headers)
-        return RequestLog(dat)
-    end)
-else
-    createLogEntry("WARNING", "Your executor is not supported!")
+function HttpSpy:ShouldShowEntry(logData)
+    if self.FilterText == "" then return true end
+    
+    local url = string.lower(logData.url)
+    local method = string.lower(logData.method)
+    
+    return string.find(url, self.FilterText, 1, true) or 
+           string.find(method, self.FilterText, 1, true)
 end
+
+function HttpSpy:ApplyFilter()
+    for _, logData in ipairs(self.Logs) do
+        local entry = self.MainContainer:FindFirstChild("LogEntry_" .. logData.id)
+        if entry then
+            entry.Visible = self:ShouldShowEntry(logData)
+        end
+    end
+    
+    self:UpdateCanvasSize()
+end
+
+function HttpSpy:ClearLogs()
+    self.Logs = {}
+    
+    for _, child in ipairs(self.MainContainer:GetChildren()) do
+        if child:IsA("TextButton") and child.Name:match("^LogEntry_") then
+            child:Destroy()
+        end
+    end
+    
+    self:UpdateCanvasSize()
+    self:ShowNotification("Logs cleared!")
+end
+
+-- Hook HTTP functions
+function HttpSpy:HookHttpFunctions()
+    -- Hook game:HttpGet
+    local originalHttpGet
+    originalHttpGet = hookfunction(game.HttpGet, function(self, url, ...)
+        HttpSpy:AddLogEntry("GET", url)
+        return originalHttpGet(self, url, ...)
+    end)
+    
+    -- Hook game:HttpPost
+    local originalHttpPost
+    originalHttpPost = hookfunction(game.HttpPost, function(self, url, body, ...)
+        HttpSpy:AddLogEntry("POST", url, nil, body)
+        return originalHttpPost(self, url, body, ...)
+    end)
+    
+    -- Hook game:HttpGetAsync
+    local originalHttpGetAsync
+    originalHttpGetAsync = hookfunction(game.HttpGetAsync, function(self, url, ...)
+        HttpSpy:AddLogEntry("GET", url)
+        return originalHttpGetAsync(self, url, ...)
+    end)
+    
+    -- Hook game:HttpPostAsync
+    local originalHttpPostAsync
+    originalHttpPostAsync = hookfunction(game.HttpPostAsync, function(self, url, body, ...)
+        HttpSpy:AddLogEntry("POST", url, nil, body)
+        return originalHttpPostAsync(self, url, body, ...)
+    end)
+    
+    -- Hook executor-specific request functions
+    if syn and syn.request then
+        local originalSynRequest = syn.request
+        syn.request = function(options)
+            HttpSpy:AddLogEntry(options.Method or "REQUEST", options.Url, options.Headers, options.Body)
+            return originalSynRequest(options)
+        end
+    elseif request then
+        local originalRequest = request
+        request = function(options)
+            HttpSpy:AddLogEntry(options.Method or "REQUEST", options.Url, options.Headers, options.Body)
+            return originalRequest(options)
+        end
+    elseif http and http.request then
+        local originalHttpRequest = http.request
+        http.request = function(options)
+            if type(options) == "string" then
+                HttpSpy:AddLogEntry("GET", options)
+            else
+                HttpSpy:AddLogEntry(options.Method or "REQUEST", options.Url, options.Headers, options.Body)
+            end
+            return originalHttpRequest(options)
+        end
+    else
+        -- Handle unsupported executors
+        HttpSpy:AddLogEntry("WARNING", "Your executor's HTTP functions may not be fully supported")
+    end
+end
+
+-- Initialize everything
+function HttpSpy:Initialize()
+    self:CreateUI()
+    self:SetupEvents()
+    self:HookHttpFunctions()
+    
+    -- Add a welcome message
+    self:AddLogEntry("INFO", "HTTP Spy v2 Advanced initialized successfully!")
+    
+    return self
+end
+
+-- Start the HTTP Spy
+local spy = HttpSpy:Initialize()
+
+return spy
