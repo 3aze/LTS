@@ -1,0 +1,64 @@
+-- Cache
+local GetGenv, GetNameCallMethod, HookMetaMethod, HookFunction, NewCClosure, CheckCaller =
+    getgenv, getnamecallmethod, hookmetamethod, hookfunction, newcclosure, checkcaller
+
+-- Init
+local Env = GetGenv()
+if Env.EdAntiKick then return end
+
+-- Services
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local StarterGui = game:GetService("StarterGui")
+
+-- Utilities
+local CloneRef = cloneref or function(...) return ... end
+local CloneFunc = clonefunction or function(...) return ... end
+local CompareInstances = CompareInstances or function(a, b)
+    return typeof(a) == "Instance" and typeof(b) == "Instance" and a == b
+end
+local CanCastToStdString = function(...)
+    return pcall(game.FindFirstChild, game, ...)
+end
+
+-- Config
+Env.EdAntiKick = {
+    Enabled = true,
+    SendNotifications = true,
+    CheckCaller = true
+}
+
+local function Notify(Title, Text, Icon)
+    if Env.EdAntiKick.SendNotifications then
+        StarterGui:SetCore("SendNotification", {Title = Title, Text = Text, Icon = Icon, Duration = 2})
+    end
+end
+
+-- Hooks
+local OldNameCall = HookMetaMethod(game, "__namecall", NewCClosure(function(self, ...)
+    local Method = GetNameCallMethod()
+    local Args = {...}
+    if Env.EdAntiKick.Enabled
+       and CompareInstances(self, LocalPlayer)
+       and Method:lower() == "kick"
+       and (not Env.EdAntiKick.CheckCaller or not CheckCaller())
+       and CanCastToStdString(Args[1]) then
+        Notify("Exunys Developer - AntiKick", "Intercepted kick attempt.", "rbxassetid://6238540373")
+        return
+    end
+    return OldNameCall(self, ...)
+end))
+
+local OldKickFunc = HookFunction(LocalPlayer.Kick, function(self, Reason)
+    if Env.EdAntiKick.Enabled
+       and CompareInstances(self, LocalPlayer)
+       and (not Env.EdAntiKick.CheckCaller or not CheckCaller())
+       and CanCastToStdString(Reason) then
+        Notify("Exunys Developer - AntiKick", "Intercepted kick attempt.", "rbxassetid://6238540373")
+        return
+    end
+    return OldKickFunc(self, Reason)
+end)
+
+-- Loaded
+Notify("Exunys Developer - AntiKick", "Anti-Kick loaded!", "rbxassetid://6238537240")
